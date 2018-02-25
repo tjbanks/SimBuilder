@@ -5,8 +5,12 @@ Created on Sat Feb 24 23:26:54 2018
 @author: Tyler Banks
 """
 
-import tkinter as tk
-from tkinter import ttk
+try:
+    import Tkinter as tk # this is for python2
+    import ttk
+except:
+    import tkinter as tk # this is for python3
+    from tkinter import ttk
 
 root = tk.Tk()
 root.title("Neuron Model Configuration")
