@@ -89,7 +89,9 @@ with open(filepath) as fp:
            line_option = re.search(',(.+?)$', m.group(1))
            if line_option:
                print(line_option.group(1))
-               
+           line_comment = re.search('\/\/(.+?)$',line)
+           if line_comment:
+               print(line_comment.group(1))
            temp = tk.Label(page1, text=line_text.group(1))
            temp.grid(column=0, row =r, sticky='W') 
            
@@ -97,6 +99,10 @@ with open(filepath) as fp:
            e.delete(0,tk.END)
            e.insert(0,line_option.group(1))
            e.grid(column=1, row=r, sticky='E')
+           
+           temp = tk.Label(page1, text=line_comment.group(1))
+           temp.grid(column=2, row =r, sticky='W') 
+           
            r = r+1
        line = fp.readline()
        cnt += 1
