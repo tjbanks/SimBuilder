@@ -4,6 +4,8 @@ Created on Sat Feb 24 23:26:54 2018
 
 @author: Tyler Banks
 """
+import re
+import glob
 
 try:
     import Tkinter as tk # this is for python2
@@ -12,10 +14,19 @@ except:
     import tkinter as tk # this is for python3
     from tkinter import ttk
 
+dataset_folder = 'datasets'
+cells_folder = 'cells'
+
+cellnums_glob = dataset_folder+'/cellnumbers_*.dat'
+connections_glob = dataset_folder+'/conndata_*.dat'
+
+cells_glob = cells_folder+'/class_*.hoc'
+
 
 class CreateToolTip(object):
     """
     create a tooltip for a given widget
+    https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter
     """
     def __init__(self, widget, text='widget info'):
         self.waittime = 500     #miliseconds
@@ -116,51 +127,142 @@ def bind_page(page, gen_frame):
     
 
 def parameters_page(frame):
+    '''
+    Reads the parameters hoc file
+    Lines should be formatted like:
+    default_var("Variable","value")		// Comment to be tip
+    '''
+    def read_parameters():
+        return
     
-    import re
+    def write_parameters():
+        return
+    
     r = 2
     filepath = 'setupfiles/parameters.hoc'  
     with open(filepath) as fp:  
        line = fp.readline()
        cnt = 1
        while line:
-           
-           #print("Line {}: {}".format(cnt, line.strip()))
            m = re.search('default_var\((.+?)\)', line)
            if m:
-               line_text = re.search('\"(.+?)\"', m.group(1))
-               line_option = re.search(',(.+?)$', m.group(1))
+               line_variable = re.search('\"(.+?)\"', m.group(1))
+               line_value = re.search(',(.+?)$', m.group(1))
                line_comment = re.search('\/\/ (.+?)$',line)
                    
-               temp = tk.Label(frame, text=line_text.group(1))
-               #temp.pack()
-               temp.grid(column=0, row =r, padx=5, sticky='W') 
+               var = tk.Label(frame, text=line_variable.group(1))
+               var.grid(column=0, row =r, padx=5, sticky='W') 
                
+               val = tk.Entry(frame)
+               val.delete(0,tk.END)
+               val.insert(0,line_value.group(1))
+               val.grid(column=1, row=r, sticky='E')
                
-               e = tk.Entry(frame)
-               e.delete(0,tk.END)
-               e.insert(0,line_option.group(1))
-               #e.pack()
-               e.grid(column=1, row=r, sticky='E')
-               
-               CreateToolTip(temp,line_comment.group(1))
-               
-               #temp = tk.Label(frame, text=)
-               #temp.pack()
-               #temp.grid(column=2, row =r, sticky='W') 
+               CreateToolTip(var,line_comment.group(1))
                           
                r = r+1
            line = fp.readline()
            cnt += 1
 
-def cells_page(frame):
-    height = 5
-    width = 5
-    for i in range(height): #Rows
-        for j in range(width): #Columns
-            b = tk.Entry(frame, text="",relief=tk.RIDGE)
-            b.grid(row=i, column=j)
+def cells_page(root):
 
+    data_changed = False
+    cellnums_pd = ''
+    
+    def re_gen_table():
+        return
+    
+    def new_row():
+        return
+    
+    def remove_row():
+        return
+    
+    def load(*args):
+        print ("loading: " + filename.get())
+        import pandas as pd
+        cellnums_pd = pd.read_csv(filename.get() ,delimiter=' ',\
+                           skiprows=1,header=None,\
+                           names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real"])
+       
+    def save():
+        return
+    
+    def new():
+        return
+    
+    options = glob.glob(cellnums_glob)
+    cellclasses = glob.glob(cells_glob)
+    cellclasses_a = []
+    
+    search = 'cells\\\\class_(.+?).hoc'
+    for c in cellclasses:
+        m = re.search(search, c)
+        if m:
+            cellclasses_a.append(m.group(1))
+    
+    
+    #print(cellclasses)
+    
+    #Create the choice option panel
+    option_frame = tk.Frame(root)
+    option_frame.pack()
+    
+    filename = tk.StringVar(option_frame)
+    filename.trace("w",load)
+    filename.set(options[0])
+    
+    fileMenu = tk.OptionMenu(option_frame, filename, *options)
+    fileMenu.grid(column=0, row =0, padx=5, sticky='W')
+    saveButton = tk.Button(option_frame, text="Save", command=save)
+    saveButton.grid(column=1, row =0, padx=5, sticky='W')
+    newButton = tk.Button(option_frame, text="New", command=save)
+    newButton.grid(column=2, row =0, padx=5, sticky='W')
+    
+    
+    #File grids
+    table_frame = tk.Frame(root)
+    table_frame.pack()
+    
+    #for reference
+    cellname = tk.StringVar(option_frame)
+    cellname.set(cellclasses_a[0])
+    cellmenu = tk.OptionMenu(option_frame, cellname, *cellclasses_a)
+    cellmenu.grid(column=3,row=0,padx=5,sticky='W')
+    
+    #from pandastable import Table
+    #pt = Table(frame,dataframe=cellnums)
+    #pt.show()
+    
+    
+def connections_page(root):
+    
+    def read_connections():
+        import pandas as pd
+        cellnums = pd.read_csv('./datasets/conndata_100.dat',delimiter=' ',\
+                           skiprows=1,header=None,\
+                           names = ["Presynaptic Cell", "Postsynaptic Cell", "Synapse Weight", "Convergence","Num Synapses per Connection"])
+        return cellnums
+    
+    def write_connections():
+        return
+    
+
+    options = glob.glob('datasets/conndata_*.dat')
+    filename = tk.StringVar(root)
+    filename.set(options[0])
+    
+    w = tk.OptionMenu(root, filename, *options)
+    w.pack()
+    
+    def ok():
+        print ("value: " + filename.get())
+        
+    button = tk.Button(root, text="ok", command=ok)
+    button.pack()
+    
+    #print(read_connections())
+    
 
 def main():
     root = tk.Tk()
@@ -177,16 +279,19 @@ def main():
     page3 = ttk.Frame(nb)
     page4 = ttk.Frame(nb)
     page5 = ttk.Frame(nb)
+    page6 = ttk.Frame(nb)
     
     nb.add(page1, text='Parameters')
     nb.add(page2, text='Cells')
     nb.add(page3, text='Connections')
     nb.add(page4, text='Synapses')
     nb.add(page5, text='Phasic Data')
+    nb.add(page6, text='Cell Builder')
     
     #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
     bind_page(page1, parameters_page)
     bind_page(page2, cells_page)
+    bind_page(page3, connections_page)
     
     root.mainloop()
 
