@@ -80,6 +80,118 @@ class CreateToolTip(object):
             tw.destroy()
           
             
+class PandasTable(tk.Frame):
+    '''Easily display an editable pandas dataframe in TK as a Frame'''
+    
+    root = None
+    table_frame_internal = None
+    names = []
+    values_arr = [] #values of all rows ever entered
+    entities_arr = [] #all entities in the rows
+    deleted_rows = [] #keep track of what has been deleted, since we don't really delete
+    
+    def __init__(self, widget):
+        super(PandasTable, self).__init__(widget)
+        self.root = tk.Frame(widget)
+        self.table_frame_internal = tk.Frame(self.root)
+        addCellButton = tk.Button(self.root, text="Add Cell", command=lambda: self.add_row(None))
+        addCellButton.grid(column=0, row =1, padx=5, sticky='W')
+        return
+    
+    def pack(self,*args):
+        super(PandasTable,self).pack(*args)
+        self.root.pack(*args)
+        #self.table_frame_internal.pack()
+        
+    def grid(self,*args):
+        super(PandasTable,self).grid(*args)
+        self.root.grid(*args)
+    
+    def set_dataframe(self, df):
+        '''Totally wipe the slate and display a new dataframe'''
+        for widget in self.table_frame_internal.winfo_children():
+            widget.destroy()
+        self.entities_arr.clear()
+        self.values_arr.clear()
+        self.deleted_rows.clear()
+        
+        self.names = list(df)        
+        for k, n in enumerate(self.names):
+            var = tk.Label(self.table_frame_internal, text=n)
+            var.config(width=15,relief=tk.GROOVE)
+            var.grid(column=k, row =0, padx=5, sticky='W')
+        
+        for i, row in df.iterrows():
+            self.add_row(row)            
+        
+        self.table_frame_internal.grid(sticky="news",row=0,column=0)#row=shape[0], column=shape[1])
+        return
+    
+    
+    
+    def get_dataframe(self):
+        #for each row if not in deleted
+        return
+    
+    def add_row(self,row):
+        col_arr = []
+        entity_arr = []
+        id = len(self.entities_arr)
+        insert_i = len(self.entities_arr)+1
+
+        if row is None:
+            test = ['']*len(self.names)
+            r = pd.DataFrame(test).transpose()
+            r.columns = self.names
+            for k, rt in r.iterrows():
+                row = rt
+                break
+        
+        for j, col in enumerate(row):
+            value = tk.StringVar(self.table_frame_internal)
+            value.set(col)
+            entity = None
+            if j == 10000:
+                entity = tk.OptionMenu(self.table_frame_internal, value, *cellclasses_a)
+                entity.config(width=20)
+                entity.grid(column=j,row=insert_i,sticky='W')
+            else:
+                entity = tk.Entry(self.table_frame_internal)
+                entity.delete(0,tk.END)
+                entity.insert(0,value.get())
+                entity.place(width=20)
+                entity.grid(row=insert_i,column=j,sticky='E')
+                
+            entity_arr.append(entity)
+            col_arr.append(value)
+            
+        remove_button = tk.Button(self.table_frame_internal,text="X", command=lambda r = id: self.del_row(r))
+        remove_button.grid(row=insert_i, column=len(self.names))
+        entity_arr.append(remove_button)
+        
+        self.entities_arr.append(entity_arr)
+        self.values_arr.append(col_arr)
+        
+        return 
+    
+    def del_row(self, row):
+        '''A little unsafe, we assume clean data'''
+        for i,r in enumerate(self.entities_arr):
+            for j,c in enumerate(r):
+                if(i==row):
+                    c.grid_forget()
+
+        for i in self.deleted_rows:
+            if i == row:
+                return
+        self.deleted_rows.append(row)
+        
+        return
+    
+    def has_changed(self):
+        return True
+        
+    
 def menu_bar(root):
     def hello():
         print("hello!")
@@ -171,85 +283,19 @@ def cells_page(root):
 
     cells_page.data_changed = False
     
-    option_frame = tk.Frame(root)
+    top_option_frame = tk.Frame(root)
     table_frame = tk.Frame(root)
-    table_frame_internal = tk.Frame(table_frame)
     bottom_option_frame = tk.Frame(root)
-    cells_page.row_arr  = []
-    
-    def re_gen_table(cellnums_pd):
-        names = list(cellnums_pd)
-        header_frame = tk.Frame(table_frame)
-        header_frame.grid(row=0,column=0)
-        for k, n in enumerate(names):
-            var = tk.Label(header_frame, text=n)
-            var.config(width=15,relief=tk.GROOVE)
-            var.grid(column=k, row =0, padx=5, sticky='W') 
-        #shape = cellnums_pd.shape
-        
-        for widget in table_frame_internal.winfo_children():
-            print(widget)
-            widget.destroy()
-        cells_page.row_arr.clear()
-        table_frame_internal.grid(sticky="news",row=1,column=0)#row=shape[0], column=shape[1])
-        for i, row in cellnums_pd.iterrows():
-            row_frame = tk.Frame(table_frame_internal)
-            row_frame.grid(row=len(cells_page.row_arr))
-            for j, col in enumerate(row):
-                if j == 1:
-                    cellname = tk.StringVar(row_frame)
-                    cellname.set(col)
-                    cellmenu = tk.OptionMenu(row_frame, cellname, *cellclasses_a)
-                    cellmenu.config(width=20)
-                    cellmenu.grid(column=j,row=i,sticky='W')
-                else:
-                    ent = tk.Entry(row_frame)
-                    ent.delete(0,tk.END)
-                    ent.insert(0,col)
-                    ent.place(width=20)
-                    ent.grid(row=i,column=j,sticky='E')
-            cells_page.row_arr.append(row_frame)
-            r = len(cells_page.row_arr)-1
-            remove_button = tk.Button(row_frame,text="X", command=lambda r = r: remove_row(r))
-            remove_button.grid(row=i, column=6)
-            
-            #cells_page.rows = cells_page.rows+1
-        #table_frame.grid_configure()
-        return
-    
-    def new_row():
-        row_frame = tk.Frame(table_frame_internal)
-        row_frame.grid(row=len(cells_page.row_arr))
-        for j in range(5):
-            if j == 1:
-                cellname = tk.StringVar(row_frame)
-                cellname.set("")
-                cellmenu = tk.OptionMenu(row_frame, cellname, *cellclasses_a)
-                cellmenu.config(width=20)
-                cellmenu.grid(column=j,row=len(cells_page.row_arr),sticky='W')
-            else:
-                ent = tk.Entry(row_frame)
-                ent.delete(0,tk.END)
-                ent.insert(0,"")
-                ent.config(width=20)
-                ent.grid(column=j,row=len(cells_page.row_arr),sticky='E')
-        cells_page.row_arr.append(row_frame)
-        r = len(cells_page.row_arr)-1
-        remove_button = tk.Button(row_frame,text="X", command=lambda r = r: remove_row(r))
-        remove_button.grid(row=len(cells_page.row_arr)-1, column=6)
-        return
-    
-    def remove_row(r):
-        cells_page.row_arr[r].grid_forget()
-        #del cells_page.row_arr[r]
-        return
     
     def load(*args):
         print ("loading: " + filename.get())
         cellnums_pd = pd.read_csv(filename.get() ,delimiter=' ',\
                            skiprows=1,header=None,\
                            names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real:1 Artificial:0"])
-        re_gen_table(cellnums_pd)
+        
+        pt = PandasTable(table_frame)
+        pt.set_dataframe(cellnums_pd)
+        pt.pack()
        
     def save():
         return
@@ -271,39 +317,27 @@ def cells_page(root):
     #print(cellclasses)
     
     #Create the choice option panel
-    option_frame.pack()
+    top_option_frame.pack()
     
-    filename = tk.StringVar(option_frame)
+    filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
     filename.set(options[0])
     
-    fileMenu = tk.OptionMenu(option_frame, filename, *options)
+    fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
     fileMenu.grid(column=1, row =0, padx=5, sticky='W')
-    saveButton = tk.Button(option_frame, text="Save", command=save)
+    saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=2, row =0, padx=5, sticky='W')
-    newButton = tk.Button(option_frame, text="New", command=save)
+    newButton = tk.Button(top_option_frame, text="New", command=save)
     newButton.grid(column=0, row =0, padx=5, sticky='W')
-    useButton = tk.Button(option_frame, text="Set as NumData parameter", command=save)
+    useButton = tk.Button(top_option_frame, text="Set as NumData parameter", command=save)
     useButton.grid(column=3, row =0, padx=5, sticky='W')
     
     
     #File grids
-    
     table_frame.pack()
     
-    addCellButton = tk.Button(bottom_option_frame, text="Add Cell", command=new_row)
-    addCellButton.grid(column=1, row =0, padx=5, sticky='W')
     bottom_option_frame.pack()
     
-    #for reference
-    '''cellname = tk.StringVar(option_frame)
-    cellname.set(cellclasses_a[0])
-    cellmenu = tk.OptionMenu(option_frame, cellname, *cellclasses_a)
-    cellmenu.grid(column=3,row=0,padx=5,sticky='W')
-    '''
-    #from pandastable import Table
-    #pt = Table(frame,dataframe=cellnums)
-    #pt.show()
     
     
 def connections_page(root):
@@ -335,6 +369,17 @@ def connections_page(root):
     #print(read_connections())
     
 
+def synapses_page(root):
+    
+    cellnums_pd = pd.read_csv('datasets/cellnumbers_104.dat' ,delimiter=' ',\
+                           skiprows=1,header=None,\
+                           names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real:1 Artificial:0"])
+    pt = PandasTable(root)
+    pt.set_dataframe(cellnums_pd)
+    pt.pack()
+        
+    return
+
 def main():
     root = tk.Tk()
     #root.resizable(0,0)
@@ -353,10 +398,10 @@ def main():
     page6 = ttk.Frame(nb)
     page7 = ttk.Frame(nb)
     
+    nb.add(page4, text='Synapses')
     nb.add(page1, text='Parameters')
     nb.add(page2, text='Cells')
     nb.add(page3, text='Connections')
-    nb.add(page4, text='Synapses')
     nb.add(page5, text='Phasic Data')
     nb.add(page6, text='Cell Builder')
     nb.add(page7, text='Simulation Builder')
@@ -365,6 +410,7 @@ def main():
     bind_page(page1, parameters_page)
     bind_page(page2, cells_page)
     bind_page(page3, connections_page)
+    bind_page(page4, synapses_page)
     
     root.mainloop()
 
