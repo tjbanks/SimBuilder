@@ -153,7 +153,8 @@ def parameters_page(frame):
                line_comment = re.search('\/\/ (.+?)$',line)
                    
                var = tk.Label(frame, text=line_variable.group(1))
-               var.grid(column=0, row =r, padx=5, sticky='W') 
+               var.config(relief=tk.GROOVE)
+               var.grid(column=0, row =r, padx=5, sticky='WE') 
                
                val = tk.Entry(frame)
                val.delete(0,tk.END)
@@ -185,7 +186,9 @@ def cells_page(root):
             var.config(width=15,relief=tk.GROOVE)
             var.grid(column=k, row =0, padx=5, sticky='W') 
         #shape = cellnums_pd.shape
+        
         for widget in table_frame_internal.winfo_children():
+            print(widget)
             widget.destroy()
         cells_page.row_arr.clear()
         table_frame_internal.grid(sticky="news",row=1,column=0)#row=shape[0], column=shape[1])
@@ -193,7 +196,7 @@ def cells_page(root):
             row_frame = tk.Frame(table_frame_internal)
             row_frame.grid(row=len(cells_page.row_arr))
             for j, col in enumerate(row):
-                if j == 0:
+                if j == 1:
                     cellname = tk.StringVar(row_frame)
                     cellname.set(col)
                     cellmenu = tk.OptionMenu(row_frame, cellname, *cellclasses_a)
@@ -218,7 +221,7 @@ def cells_page(root):
         row_frame = tk.Frame(table_frame_internal)
         row_frame.grid(row=len(cells_page.row_arr))
         for j in range(5):
-            if j == 0:
+            if j == 1:
                 cellname = tk.StringVar(row_frame)
                 cellname.set("")
                 cellmenu = tk.OptionMenu(row_frame, cellname, *cellclasses_a)
@@ -275,11 +278,13 @@ def cells_page(root):
     filename.set(options[0])
     
     fileMenu = tk.OptionMenu(option_frame, filename, *options)
-    fileMenu.grid(column=0, row =0, padx=5, sticky='W')
+    fileMenu.grid(column=1, row =0, padx=5, sticky='W')
     saveButton = tk.Button(option_frame, text="Save", command=save)
-    saveButton.grid(column=1, row =0, padx=5, sticky='W')
+    saveButton.grid(column=2, row =0, padx=5, sticky='W')
     newButton = tk.Button(option_frame, text="New", command=save)
-    newButton.grid(column=2, row =0, padx=5, sticky='W')
+    newButton.grid(column=0, row =0, padx=5, sticky='W')
+    useButton = tk.Button(option_frame, text="Set as NumData parameter", command=save)
+    useButton.grid(column=3, row =0, padx=5, sticky='W')
     
     
     #File grids
