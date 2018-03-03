@@ -81,23 +81,30 @@ class CreateToolTip(object):
           
             
 class PandasTable(tk.Frame):
-    '''Easily display an editable pandas dataframe in TK as a Frame'''
-    
+    '''Easily display an editable pandas dataframe in TK as a Frame (Banks)'''
+    '''
     root = None
     table_frame_internal = None
-    names = []
+    table_tools_frame_internal = None
+    names = [] #header for the df
     values_arr = [] #values of all rows ever entered
     entities_arr = [] #all entities in the rows
     deleted_rows = [] #keep track of what has been deleted, since we don't really delete
-    
+    '''
     def __init__(self, widget):
         super(PandasTable, self).__init__(widget)
         self.root = tk.Frame(widget)
         self.table_frame_internal = tk.Frame(self.root)
-        addCellButton = tk.Button(self.root, text="Add Cell", command=lambda: self.add_row(None))
-        addCellButton.grid(column=0, row =1, padx=5, sticky='W')
+        self.table_tools_frame_internal = tk.Frame(self.root)
+        self.table_frame_internal.grid(sticky="news",row=0,column=0)
+        self.table_tools_frame_internal.grid(sticky="news",row=1,column=0)
+        self.init_tools()
         return
     
+    def init_tools(self):
+        addRowButton = tk.Button(self.table_tools_frame_internal, text="Add Row", command=lambda: self.add_row(None))
+        addRowButton.grid(column=0, row =0, padx=5, sticky='W')
+        
     def pack(self,*args):
         super(PandasTable,self).pack(*args)
         self.root.pack(*args)
@@ -111,9 +118,9 @@ class PandasTable(tk.Frame):
         '''Totally wipe the slate and display a new dataframe'''
         for widget in self.table_frame_internal.winfo_children():
             widget.destroy()
-        self.entities_arr.clear()
-        self.values_arr.clear()
-        self.deleted_rows.clear()
+        self.entities_arr = []
+        self.values_arr = []
+        self.deleted_rows = []
         
         self.names = list(df)        
         for k, n in enumerate(self.names):
@@ -123,11 +130,8 @@ class PandasTable(tk.Frame):
         
         for i, row in df.iterrows():
             self.add_row(row)            
-        
-        self.table_frame_internal.grid(sticky="news",row=0,column=0)#row=shape[0], column=shape[1])
+    
         return
-    
-    
     
     def get_dataframe(self):
         #for each row if not in deleted
@@ -185,7 +189,6 @@ class PandasTable(tk.Frame):
             if i == row:
                 return
         self.deleted_rows.append(row)
-        
         return
     
     def has_changed(self):
@@ -280,12 +283,15 @@ def parameters_page(frame):
            cnt += 1
 
 def cells_page(root):
-
-    cells_page.data_changed = False
     
     top_option_frame = tk.Frame(root)
     table_frame = tk.Frame(root)
     bottom_option_frame = tk.Frame(root)
+    
+    top_option_frame.pack()
+    table_frame.pack()
+    bottom_option_frame.pack()
+    
     
     def load(*args):
         print ("loading: " + filename.get())
@@ -317,7 +323,6 @@ def cells_page(root):
     #print(cellclasses)
     
     #Create the choice option panel
-    top_option_frame.pack()
     
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
@@ -334,9 +339,6 @@ def cells_page(root):
     
     
     #File grids
-    table_frame.pack()
-    
-    bottom_option_frame.pack()
     
     
     
@@ -383,7 +385,7 @@ def synapses_page(root):
 def main():
     root = tk.Tk()
     #root.resizable(0,0)
-    root.title("Neuron Model Configuration")
+    root.title("Neuron Model Configuration (University of Missouri - Nair Lab)")
     root.geometry('1000x600')
     root.config(menu=menu_bar(root))
     
