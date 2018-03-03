@@ -4,6 +4,8 @@ Created on Sat Feb 24 23:26:54 2018
 
 @author: Tyler Banks
 """
+
+import pandas as pd
 import re
 import glob
 
@@ -166,24 +168,85 @@ def parameters_page(frame):
 
 def cells_page(root):
 
-    data_changed = False
-    cellnums_pd = ''
+    cells_page.data_changed = False
     
-    def re_gen_table():
+    option_frame = tk.Frame(root)
+    table_frame = tk.Frame(root)
+    table_frame_internal = tk.Frame(table_frame)
+    bottom_option_frame = tk.Frame(root)
+    cells_page.row_arr  = []
+    
+    def re_gen_table(cellnums_pd):
+        names = list(cellnums_pd)
+        header_frame = tk.Frame(table_frame)
+        header_frame.grid(row=0,column=0)
+        for k, n in enumerate(names):
+            var = tk.Label(header_frame, text=n)
+            var.config(width=15,relief=tk.GROOVE)
+            var.grid(column=k, row =0, padx=5, sticky='W') 
+        #shape = cellnums_pd.shape
+        for widget in table_frame_internal.winfo_children():
+            widget.destroy()
+        cells_page.row_arr.clear()
+        table_frame_internal.grid(sticky="news",row=1,column=0)#row=shape[0], column=shape[1])
+        for i, row in cellnums_pd.iterrows():
+            row_frame = tk.Frame(table_frame_internal)
+            row_frame.grid(row=len(cells_page.row_arr))
+            for j, col in enumerate(row):
+                if j == 0:
+                    cellname = tk.StringVar(row_frame)
+                    cellname.set(col)
+                    cellmenu = tk.OptionMenu(row_frame, cellname, *cellclasses_a)
+                    cellmenu.config(width=20)
+                    cellmenu.grid(column=j,row=i,sticky='W')
+                else:
+                    ent = tk.Entry(row_frame)
+                    ent.delete(0,tk.END)
+                    ent.insert(0,col)
+                    ent.place(width=20)
+                    ent.grid(row=i,column=j,sticky='E')
+            cells_page.row_arr.append(row_frame)
+            r = len(cells_page.row_arr)-1
+            remove_button = tk.Button(row_frame,text="X", command=lambda r = r: remove_row(r))
+            remove_button.grid(row=i, column=6)
+            
+            #cells_page.rows = cells_page.rows+1
+        #table_frame.grid_configure()
         return
     
     def new_row():
+        row_frame = tk.Frame(table_frame_internal)
+        row_frame.grid(row=len(cells_page.row_arr))
+        for j in range(5):
+            if j == 0:
+                cellname = tk.StringVar(row_frame)
+                cellname.set("")
+                cellmenu = tk.OptionMenu(row_frame, cellname, *cellclasses_a)
+                cellmenu.config(width=20)
+                cellmenu.grid(column=j,row=len(cells_page.row_arr),sticky='W')
+            else:
+                ent = tk.Entry(row_frame)
+                ent.delete(0,tk.END)
+                ent.insert(0,"")
+                ent.config(width=20)
+                ent.grid(column=j,row=len(cells_page.row_arr),sticky='E')
+        cells_page.row_arr.append(row_frame)
+        r = len(cells_page.row_arr)-1
+        remove_button = tk.Button(row_frame,text="X", command=lambda r = r: remove_row(r))
+        remove_button.grid(row=len(cells_page.row_arr)-1, column=6)
         return
     
-    def remove_row():
+    def remove_row(r):
+        cells_page.row_arr[r].grid_forget()
+        #del cells_page.row_arr[r]
         return
     
     def load(*args):
         print ("loading: " + filename.get())
-        import pandas as pd
         cellnums_pd = pd.read_csv(filename.get() ,delimiter=' ',\
                            skiprows=1,header=None,\
-                           names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real"])
+                           names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real:1 Artificial:0"])
+        re_gen_table(cellnums_pd)
        
     def save():
         return
@@ -205,7 +268,6 @@ def cells_page(root):
     #print(cellclasses)
     
     #Create the choice option panel
-    option_frame = tk.Frame(root)
     option_frame.pack()
     
     filename = tk.StringVar(option_frame)
@@ -221,15 +283,19 @@ def cells_page(root):
     
     
     #File grids
-    table_frame = tk.Frame(root)
+    
     table_frame.pack()
     
+    addCellButton = tk.Button(bottom_option_frame, text="Add Cell", command=new_row)
+    addCellButton.grid(column=1, row =0, padx=5, sticky='W')
+    bottom_option_frame.pack()
+    
     #for reference
-    cellname = tk.StringVar(option_frame)
+    '''cellname = tk.StringVar(option_frame)
     cellname.set(cellclasses_a[0])
     cellmenu = tk.OptionMenu(option_frame, cellname, *cellclasses_a)
     cellmenu.grid(column=3,row=0,padx=5,sticky='W')
-    
+    '''
     #from pandastable import Table
     #pt = Table(frame,dataframe=cellnums)
     #pt.show()
@@ -280,6 +346,7 @@ def main():
     page4 = ttk.Frame(nb)
     page5 = ttk.Frame(nb)
     page6 = ttk.Frame(nb)
+    page7 = ttk.Frame(nb)
     
     nb.add(page1, text='Parameters')
     nb.add(page2, text='Cells')
@@ -287,6 +354,7 @@ def main():
     nb.add(page4, text='Synapses')
     nb.add(page5, text='Phasic Data')
     nb.add(page6, text='Cell Builder')
+    nb.add(page7, text='Simulation Builder')
     
     #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
     bind_page(page1, parameters_page)
