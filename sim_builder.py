@@ -32,6 +32,15 @@ connections_glob = dataset_folder+'/' + conndata_file_prefix +'*'+conndata_file_
 
 cells_glob = cells_folder+'/class_*.hoc'
 
+class Autoresized_Notebook(ttk.Notebook):
+    def __init__(self, master=None, **kw):
+        ttk.Notebook.__init__(self, master, **kw)
+        self.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+
+    def _on_tab_changed(self,event):
+        event.widget.update_idletasks()
+        tab = event.widget.nametowidget(event.widget.select())
+        event.widget.configure(height=tab.winfo_reqheight())
 
 class CreateToolTip(object):
     """
@@ -294,7 +303,7 @@ def bind_page(page, gen_frame):
     
     canvas = tk.Canvas(frame, bd=0,
                     xscrollcommand=xscrollbar.set,
-                    yscrollcommand=yscrollbar.set)
+                    yscrollcommand=yscrollbar.set,)
     
     xscrollbar.config(command=canvas.xview)
     yscrollbar.config(command=canvas.yview)
@@ -375,7 +384,7 @@ def cells_page(root):
         #print ("loading: " + filename.get())
         cellnums_pd = pd.read_csv(filename.get() ,delimiter=' ',\
                        skiprows=1,header=None,\
-                       names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real:1 Artifical:0"])
+                       names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
         
         pt.set_dataframe(cellnums_pd, options_dict=d)
         pt.pack()
@@ -445,6 +454,74 @@ def cells_page(root):
     
 def connections_page(root):
     
+    top_option_frame = tk.LabelFrame(root, text="File Management")
+    table_frame = tk.LabelFrame(root, text="Cell Numbers")
+    bottom_option_frame = tk.LabelFrame(root)
+    
+    top_option_frame.grid(column=0,row=0,sticky='we',padx=10,pady=5)
+    table_frame.grid(column=0,row=1,sticky='we',padx=10,pady=5)
+    bottom_option_frame.grid(column=0,row=2,sticky='we')
+    
+    l = tk.Label(top_option_frame,width=130)
+    l.grid(column=0,row=0)
+    
+    nb = Autoresized_Notebook(table_frame)
+    nb.pack(padx=5,pady=5,side="left",fill="both",expand=True)#padx=5,pady=5,side="left",fill="both",expand=True)
+
+
+    page1 = ttk.Frame(nb)
+    page2 = ttk.Frame(nb)
+    page3 = ttk.Frame(nb)
+    
+    nb.add(page1, text='Synaptic Weight')
+    nb.add(page2, text='Convergence')
+    nb.add(page3, text='Synapses per Connection')
+    
+        
+    
+    def synaptic_weight_page(root):
+        def read_connections():
+            import pandas as pd
+            cellnums = pd.read_csv('./datasets/conndata_100.dat',delimiter=' ',\
+                               skiprows=1,header=None,\
+                               names = ["Presynaptic Cell", "Postsynaptic Cell", "Synapse Weight", "Convergence","Num Synapses per Connection"])
+            return cellnums
+        
+        def write_connections():
+            return
+        
+    
+        options = glob.glob('datasets/conndata_*.dat')
+        filename = tk.StringVar(root)
+        filename.set(options[0])
+        
+        w = tk.OptionMenu(root, filename, *options)
+        w.pack()
+        
+        def ok():
+            print ("value: " + filename.get())
+            
+        button = tk.Button(root, text="ok", command=ok)
+        button.pack()
+        
+        pt = PandasTable(root)
+        pt.set_dataframe(read_connections())
+        pt.pack()
+        return
+    
+    def convergence_page(root):
+        return
+    
+    def synapses_page(root):
+        return
+    
+    #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
+    bind_page(page1, synaptic_weight_page)
+    bind_page(page2, convergence_page)
+    bind_page(page3, synapses_page)
+
+    
+    '''
     def read_connections():
         import pandas as pd
         cellnums = pd.read_csv('./datasets/conndata_100.dat',delimiter=' ',\
@@ -472,13 +549,13 @@ def connections_page(root):
     pt = PandasTable(root)
     pt.set_dataframe(read_connections())
     pt.pack()
-    
+    '''
 
 def synapses_page(root):
     
     cellnums_pd = pd.read_csv('datasets/syndata_126.dat' ,delimiter=' ',\
                            skiprows=1,header=None,\
-                           names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Real:1 Artifical:0"])
+                           names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
     pt = PandasTable(root)
     pt.set_dataframe(cellnums_pd)
     pt.pack()
@@ -490,9 +567,10 @@ def main():
     #root.resizable(0,0)
     root.title("Neuron Model Configuration (University of Missouri - Nair Lab)")
     root.geometry('1000x600')
+    #root.resizable(0,0)
     root.config(menu=menu_bar(root))
     
-    nb = ttk.Notebook(root)
+    nb = Autoresized_Notebook(root)
     nb.pack(padx=5,pady=5,side="left",fill="both",expand=True)
 
     page1 = ttk.Frame(nb)
