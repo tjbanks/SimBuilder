@@ -187,8 +187,8 @@ class PandasTable(tk.Frame):
         if show_header:
             for k, n in enumerate(self.names):
                 var = tk.Label(self.table_frame_internal, text=n)
-                var.config(width=15,relief=tk.GROOVE,background='light gray')
-                var.grid(column=k, row =0, padx=5, sticky='NEWS')
+                var.config(width=20,relief=tk.GROOVE,background='light gray')
+                var.grid(column=k+1, row =0, padx=1, sticky='NEWS')
                 
         for i, row in df.iterrows():
             self.add_row(row)            
@@ -219,6 +219,12 @@ class PandasTable(tk.Frame):
                 row = rt
                 break
         
+        num = len(self.entities_arr)-len(self.deleted_rows)
+        
+        num_button = tk.Button(self.table_frame_internal,text=str(num))
+        num_button.grid(row=insert_i, column=0,sticky='news')
+        entity_arr.append(num_button)
+        
         for j, col in enumerate(row):
             value = tk.StringVar(self.table_frame_internal)
             value.set(col)
@@ -228,17 +234,17 @@ class PandasTable(tk.Frame):
             if self.options_dict is not None and self.options_dict.get(j,False):
                 entity = tk.OptionMenu(self.table_frame_internal, value, *self.options_dict.get(j)[0])
                 entity.config(width=20)
-                entity.grid(column=j,row=insert_i,sticky='NEWS')
+                entity.grid(column=j+1,row=insert_i,sticky='NEWS')
             else:
                 entity = tk.Entry(self.table_frame_internal,textvariable=value)
                 entity.place(width=20)
-                entity.grid(row=insert_i,column=j,sticky='NEWS')
+                entity.grid(row=insert_i,column=j+1,sticky='NEWS')
                 
             entity_arr.append(entity)
             col_arr.append(value)
             
         remove_button = tk.Button(self.table_frame_internal,text="X", command=lambda r = id: self.del_row(r))
-        remove_button.grid(row=insert_i, column=len(self.names))
+        remove_button.grid(row=insert_i, column=len(self.names)+1,sticky='news')
         entity_arr.append(remove_button)
         
         self.entities_arr.append(entity_arr)
@@ -454,30 +460,31 @@ def cells_page(root):
     
 def connections_page(root):
     
+    def raise_frame(frame):
+        frame.tkraise()
+    
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Cell Numbers")
+    table_frame_internal = tk.Frame(table_frame)
+    table_frame_controls = tk.Frame(table_frame)
     bottom_option_frame = tk.LabelFrame(root)
+    
+    bottom_option_frame.tk
     
     top_option_frame.grid(column=0,row=0,sticky='we',padx=10,pady=5)
     table_frame.grid(column=0,row=1,sticky='we',padx=10,pady=5)
+    table_frame_controls.grid(column=0, row=0, sticky='we')
+    table_frame_internal.grid(column=0, row=1, sticky='news')
     bottom_option_frame.grid(column=0,row=2,sticky='we')
     
     l = tk.Label(top_option_frame,width=130)
     l.grid(column=0,row=0)
     
-    nb = Autoresized_Notebook(table_frame)
-    nb.pack(padx=5,pady=5,side="left",fill="both",expand=True)#padx=5,pady=5,side="left",fill="both",expand=True)
-
-
-    page1 = ttk.Frame(nb)
-    page2 = ttk.Frame(nb)
-    page3 = ttk.Frame(nb)
     
-    nb.add(page1, text='Synaptic Weight')
-    nb.add(page2, text='Convergence')
-    nb.add(page3, text='Synapses per Connection')
+    page1 = tk.Frame(table_frame_internal)
+    page2 = tk.Frame(table_frame_internal)
+    page3 = tk.Frame(table_frame_internal)
     
-        
     
     def synaptic_weight_page(root):
         def read_connections():
@@ -510,16 +517,30 @@ def connections_page(root):
         return
     
     def convergence_page(root):
+        tk.Label(root,text='convergence').pack()
         return
     
     def synapses_page(root):
+        tk.Label(root,text='synapses').pack()
         return
-    
+        
     #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
-    bind_page(page1, synaptic_weight_page)
-    bind_page(page2, convergence_page)
-    bind_page(page3, synapses_page)
+    #bind_page(page1, synaptic_weight_page)
+    #bind_page(page2, convergence_page)
+    #bind_page(page3, synapses_page)
 
+    tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0)
+    synaptic_weight_page(page1)
+    
+    tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0)
+    convergence_page(page2)
+    
+    tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0)
+    synapses_page(page3)
+    
+    page1.grid(column=0,row=0,sticky='news')
+    page2.grid(column=0,row=0,sticky='news')
+    page3.grid(column=0,row=0,sticky='news')
     
     '''
     def read_connections():
