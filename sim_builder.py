@@ -136,7 +136,7 @@ class PandasTable(tk.Frame):
     entities_arr = [] #all entities in the rows
     deleted_rows = [] #keep track of what has been deleted, since we don't really delete
     '''
-    def __init__(self, widget):
+    def __init__(self, widget, show_add_row_button=True):
         super(PandasTable, self).__init__(widget)
         self.root = tk.Frame(widget,padx=5,pady=5)
         self.table_frame_internal = tk.Frame(self.root,background='white')
@@ -146,14 +146,22 @@ class PandasTable(tk.Frame):
         self.table_frame_internal.grid(sticky="news",row=0,column=0)
         self.table_tools_frame_internal.grid(sticky="news",row=1,column=0)
         self.options_dict = None
-        self.init_tools()
         self.data_changed = False
         self.show_header = True
+        self.show_numbering = True
+        self.show_delete_row = True
+        self.first_column_is_header = False
+        self.first_column_is_id = False
+        self.show_add_row_button = show_add_row_button
+        self.immutable_columns = []
+        self.col_width=15
+        self.init_tools()
         return
     
     def init_tools(self):
-        addRowButton = tk.Button(self.table_tools_frame_internal, text="Add Row", command=lambda: self.add_row(None))
-        addRowButton.grid(column=0, row =0, padx=5,pady=5, sticky='W')
+        if self.show_add_row_button:
+            addRowButton = tk.Button(self.table_tools_frame_internal, text="Add Row", command=lambda: self.add_row(None))
+            addRowButton.grid(column=0, row =0, padx=5,pady=5, sticky='W')
         
     def pack(self,*args):
         super(PandasTable,self).pack(*args)
@@ -171,10 +179,19 @@ class PandasTable(tk.Frame):
     def has_changed(self):
         return self.data_changed
        
-    def set_dataframe(self, df, options_dict = defaultdict(list), show_header=True):
+    def set_dataframe(self, df, options_dict = defaultdict(list), \
+                      show_header=True, show_numbering=True, \
+                      show_delete_row=True, first_column_is_header=False, \
+                      first_column_is_id= False, immutable_columns=[]):
         '''Totally wipe the slate and display a new dataframe'''
         self.data_changed = False
         self.show_header = show_header
+        self.show_numbering = show_numbering
+        self.show_delete_row = show_delete_row
+        self.first_column_is_header = first_column_is_header
+        self.first_column_is_id = first_column_is_id
+        self.immutable_columns = immutable_columns
+        
         for widget in self.table_frame_internal.winfo_children():
             widget.destroy()
         self.entities_arr = []
@@ -186,9 +203,11 @@ class PandasTable(tk.Frame):
         
         if show_header:
             for k, n in enumerate(self.names):
+                if self.first_column_is_id and k==0:
+                    continue
                 var = tk.Label(self.table_frame_internal, text=n)
-                var.config(width=20,relief=tk.GROOVE,background='light gray')
-                var.grid(column=k+1, row =0, padx=1, sticky='NEWS')
+                var.config(width=self.col_width,relief=tk.GROOVE,background='light gray')
+                var.grid(column=k+3, row =0, padx=1, sticky='NEWS')
                 
         for i, row in df.iterrows():
             self.add_row(row)            
@@ -221,9 +240,20 @@ class PandasTable(tk.Frame):
         
         num = len(self.entities_arr)-len(self.deleted_rows)
         
-        num_button = tk.Button(self.table_frame_internal,text=str(num))
-        num_button.grid(row=insert_i, column=0,sticky='news')
-        entity_arr.append(num_button)
+        if self.show_numbering:
+            num_button = tk.Button(self.table_frame_internal,text=str(num))
+            num_button.grid(row=insert_i, column=0,sticky='news')
+            entity_arr.append(num_button)
+            
+        if self.first_column_is_header:
+            text = ' '
+            if id < len(self.names):
+                text = self.names[id]
+            identity_button = tk.Label(self.table_frame_internal,text=str(text))
+            identity_button.config(width=self.col_width,relief=tk.GROOVE,background='light gray')
+            identity_button.grid(row=insert_i, column=1,sticky='news')
+            entity_arr.append(identity_button)
+               
         
         for j, col in enumerate(row):
             value = tk.StringVar(self.table_frame_internal)
@@ -231,21 +261,26 @@ class PandasTable(tk.Frame):
             value.trace("w",self.change_in_data)
             entity = None
             
-            if self.options_dict is not None and self.options_dict.get(j,False):
+            if self.first_column_is_id and j==0:
+                entity = tk.Label(self.table_frame_internal,text=value.get())
+                entity.config(width=20,relief=tk.GROOVE,background='light gray')
+                entity.grid(row=insert_i, column=2,sticky='news')
+            elif self.options_dict is not None and self.options_dict.get(j,False):
                 entity = tk.OptionMenu(self.table_frame_internal, value, *self.options_dict.get(j)[0])
                 entity.config(width=20)
-                entity.grid(column=j+1,row=insert_i,sticky='NEWS')
+                entity.grid(column=j+3,row=insert_i,sticky='NEWS')
             else:
                 entity = tk.Entry(self.table_frame_internal,textvariable=value)
                 entity.place(width=20)
-                entity.grid(row=insert_i,column=j+1,sticky='NEWS')
+                entity.grid(row=insert_i,column=j+3,sticky='NEWS')
                 
             entity_arr.append(entity)
             col_arr.append(value)
-            
-        remove_button = tk.Button(self.table_frame_internal,text="X", command=lambda r = id: self.del_row(r))
-        remove_button.grid(row=insert_i, column=len(self.names)+1,sticky='news')
-        entity_arr.append(remove_button)
+           
+        if self.show_delete_row:
+            remove_button = tk.Button(self.table_frame_internal,text="X", command=lambda r = id: self.del_row(r))
+            remove_button.grid(row=insert_i, column=len(self.names)+3,sticky='news')
+            entity_arr.append(remove_button)
         
         self.entities_arr.append(entity_arr)
         self.values_arr.append(col_arr)
@@ -372,7 +407,7 @@ def cells_page(root):
     table_frame.grid(column=0,row=1,sticky='news',padx=10,pady=5)
     bottom_option_frame.grid(column=0,row=2)
     
-    pt = PandasTable(table_frame)
+    pt = PandasTable(table_frame, show_add_row_button=True)
     
     cellclasses_a = []
     options = glob.glob(cellnums_glob)
@@ -392,7 +427,7 @@ def cells_page(root):
                        skiprows=1,header=None,\
                        names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
         
-        pt.set_dataframe(cellnums_pd, options_dict=d)
+        pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
         pt.pack()
        
     def save():
@@ -460,11 +495,42 @@ def cells_page(root):
     
 def connections_page(root):
     
+    
+    class connections_adapter(object):
+        
+        def __init__(self, root, col):
+            self.root = root
+            self.col = col
+            self.pt = PandasTable(self.root, show_add_row_button=False)
+            self.pt.pack()
+            
+        def read_internal(self, df):
+            '''get whole dataframe, return just a single nxn df'''
+            df1 = df[df.columns[[0,1,self.col]]]
+            pre = df1[df1.columns[0]].unique()
+            pre = pd.DataFrame(pre)
+            post = df1[df1.columns[1]].unique()
+            vals = df1[df1.columns[2]]
+            vals = pd.DataFrame(vals.values.reshape(len(pre),len(post)),columns=post)
+            df1 = pd.concat([pre,vals],axis=1)
+            print(df1)
+            return df1
+        
+        def get_df(self):
+            return
+        
+        def refresh(self, df):
+            self.pt.set_dataframe(self.read_internal(df), show_delete_row=False,\
+                                  show_header=True, show_numbering=False, \
+                                  first_column_is_id=True)
+            self.pt.pack()
+      
+    
     def raise_frame(frame):
         frame.tkraise()
     
     top_option_frame = tk.LabelFrame(root, text="File Management")
-    table_frame = tk.LabelFrame(root, text="Cell Numbers")
+    table_frame = tk.LabelFrame(root, text="Connection Data")
     table_frame_internal = tk.Frame(table_frame)
     table_frame_controls = tk.Frame(table_frame)
     bottom_option_frame = tk.LabelFrame(root)
@@ -476,101 +542,125 @@ def connections_page(root):
     table_frame_controls.grid(column=0, row=0, sticky='we')
     table_frame_internal.grid(column=0, row=1, sticky='news')
     bottom_option_frame.grid(column=0,row=2,sticky='we')
-    
-    l = tk.Label(top_option_frame,width=130)
-    l.grid(column=0,row=0)
-    
+   
     
     page1 = tk.Frame(table_frame_internal)
     page2 = tk.Frame(table_frame_internal)
     page3 = tk.Frame(table_frame_internal)
     
     
-    def synaptic_weight_page(root):
-        def read_connections():
-            import pandas as pd
-            cellnums = pd.read_csv('./datasets/conndata_100.dat',delimiter=' ',\
-                               skiprows=1,header=None,\
-                               names = ["Presynaptic Cell", "Postsynaptic Cell", "Synapse Weight", "Convergence","Num Synapses per Connection"])
-            return cellnums
-        
-        def write_connections():
-            return
-        
+    ######################################
     
-        options = glob.glob('datasets/conndata_*.dat')
-        filename = tk.StringVar(root)
-        filename.set(options[0])
-        
-        w = tk.OptionMenu(root, filename, *options)
-        w.pack()
-        
-        def ok():
-            print ("value: " + filename.get())
+    #pt = PandasTable(table_frame, show_add_row_button=True)
+    
+    cellclasses_a = []
+    options = glob.glob(connections_glob)
+    
+    d = defaultdict(list)
+    d[1].append(cellclasses_a)
             
-        button = tk.Button(root, text="ok", command=ok)
-        button.pack()
-        
-        pt = PandasTable(root)
-        pt.set_dataframe(read_connections())
-        pt.pack()
-        return
     
-    def convergence_page(root):
-        tk.Label(root,text='convergence').pack()
-        return
-    
-    def synapses_page(root):
-        tk.Label(root,text='synapses').pack()
-        return
-        
-    #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
-    #bind_page(page1, synaptic_weight_page)
-    #bind_page(page2, convergence_page)
-    #bind_page(page3, synapses_page)
-
     tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0)
-    synaptic_weight_page(page1)
+    synaptic_weight_page_obj = connections_adapter(page1,2)
     
     tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0)
-    convergence_page(page2)
+    convergence_page_obj = connections_adapter(page2,3)#convergence_page(page2)
     
     tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0)
-    synapses_page(page3)
+    synapses_page_obj = connections_adapter(page3,4)#synapses_page(page3)
     
-    page1.grid(column=0,row=0,sticky='news')
-    page2.grid(column=0,row=0,sticky='news')
-    page3.grid(column=0,row=0,sticky='news')
     
-    '''
-    def read_connections():
-        import pandas as pd
-        cellnums = pd.read_csv('./datasets/conndata_100.dat',delimiter=' ',\
-                           skiprows=1,header=None,\
-                           names = ["Presynaptic Cell", "Postsynaptic Cell", "Synapse Weight", "Convergence","Num Synapses per Connection"])
-        return cellnums
+    ######################################
     
-    def write_connections():
+    
+    def generate_files_available():
+        cellclasses = glob.glob(cells_glob)
+        cellclasses_a.clear()
+        search = 'cells\\\\class_(.+?).hoc'
+        for c in cellclasses:
+            m = re.search(search, c)
+            if m:
+                cellclasses_a.append(m.group(1))
+    
+    def load(*args):
+        #print ("loading: " + filename.get())
+        df = pd.read_csv(filename.get() ,delimiter=' ',\
+                       skiprows=1,header=None,\
+                       names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
+        
+        page1.grid_forget()
+        page2.grid_forget()
+        page3.grid_forget()
+        
+        synaptic_weight_page_obj.refresh(df)
+        convergence_page_obj.refresh(df)
+        synapses_page_obj.refresh(df)
+        
+        page1.grid(column=0,row=0,sticky='news')
+        page2.grid(column=0,row=0,sticky='news')
+        page3.grid(column=0,row=0,sticky='news')
+        #pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
+        #pt.grid()
+       
+    def save():
+        #pt_df = pt.get_dataframe()
+        #(nr,nc) = pt_df.shape 
+        #tb = pt_df.to_csv(sep=' ',header=False,index=False)
+        
+        #file = open(filename.get(),"w")
+        #file.write(str(nr)+'\n')
+        #file.write(tb)
+        #file.close()
         return
     
+    def new():
+        #if pt.has_changed():
+        #    result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+        #    if result != 'yes':
+        #        return
+        #d = DialogEntryBox(root,text="New File Name:")
+        #root.wait_window(d.top)
+        #
+        #if d.confirm==False:
+        #    return
+        
+        #newfilename = dataset_folder+'\\'+cellnums_file_prefix+ d.value.get() + cellnums_file_postfix
+        #f = open(newfilename,"w+")
+        #f.close
+        ##pt.new()
+        #generate_files_available()
+        ##https://stackoverflow.com/questions/17580218/changing-the-options-of-a-optionmenu-when-clicking-a-button
+    
+        #m = fileMenu.children['menu']
+        #m.delete(0,tk.END)
+        #newvalues = options
+        #newvalues.append(newfilename)
+        #for val in newvalues:
+        #    m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+        #filename.set(newfilename)
+        
+        #pt.new()
+        return
 
-    options = glob.glob('datasets/conndata_*.dat')
-    filename = tk.StringVar(root)
+    #generate_files_available()
+    
+    #Create the choice option panel
+    filename = tk.StringVar(top_option_frame)
+    filename.trace("w",load)
     filename.set(options[0])
     
-    w = tk.OptionMenu(root, filename, *options)
-    w.pack()
-    
-    def ok():
-        print ("value: " + filename.get())
-        
-    button = tk.Button(root, text="ok", command=ok)
-    button.pack()
-    
-    pt = PandasTable(root)
-    pt.set_dataframe(read_connections())
-    pt.pack()
-    '''
+    newFromCellsButton = tk.Button(top_option_frame, text="Generate Base From Cells File", command=new)
+    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='W')
+    newButton = tk.Button(top_option_frame, text="New", command=new)
+    newButton.grid(column=1, row =0, padx=5, sticky='W')
+    fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
+    fileMenu.grid(column=2, row =0, padx=5, sticky='W')
+    saveButton = tk.Button(top_option_frame, text="Save", command=save)
+    saveButton.grid(column=3, row =0, padx=5, sticky='W')
+    useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=save)
+    useButton.grid(column=4, row =0, padx=5, sticky='W')
+
+
 
 def synapses_page(root):
     
@@ -601,6 +691,7 @@ def main():
     page5 = ttk.Frame(nb)
     page6 = ttk.Frame(nb)
     page7 = ttk.Frame(nb)
+    page8 = ttk.Frame(nb)
     
     nb.add(page1, text='Parameters')
     nb.add(page2, text='Cells')
@@ -608,7 +699,8 @@ def main():
     nb.add(page4, text='Synapses')
     nb.add(page5, text='Phasic Data')
     nb.add(page6, text='Cell Builder')
-    nb.add(page7, text='Simulation Builder')
+    nb.add(page7, text='Ion Channel Builder')
+    nb.add(page8, text='Simulation Builder')
     
     #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
     bind_page(page1, parameters_page)
