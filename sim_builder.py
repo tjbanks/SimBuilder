@@ -5,11 +5,13 @@ Created on Sat Feb 24 23:26:54 2018
 @author: Tyler Banks
 """
 
+import numpy as np
 import pandas as pd
 import os
 import re
 import glob
 from collections import defaultdict
+import threading
 
 try:
     import Tkinter as tk # this is for python2
@@ -434,6 +436,14 @@ def parameters_page(root):
             frame.pack()
             return self
         
+        def row_to_param_str(self):
+            #default_var("RunName","testrun")		// Name of simulation run
+            proto = "default_var(\"{}\",{})\t\t// {}"
+            if self.is_string:
+                proto = "default_var(\"{}\",\"{}\")\t\t// {}"
+            line = proto.format(self.variable,self.v_value.get(),self.comment)
+            return line
+        
         def pack(self,*args,**kwargs):
             super(Row,self).pack(*args,**kwargs)
             self.root.pack(*args,**kwargs)
@@ -445,7 +455,7 @@ def parameters_page(root):
     
     row_header = ['variable','value','comment','value_is_string']
     rows=[]
-    def read_parameters(filename):
+    def load(filename):
         
         params = []
         with open(filename) as fp:  
@@ -472,6 +482,13 @@ def parameters_page(root):
         return df
     
     def save():
+        file = open(params_file,"w")
+        for r in rows:
+            file.write(r.row_to_param_str()+"\n")
+        file.close()
+        
+        display_app_status('Parameters \"'+params_file+'\" saved')
+        
         return
     
     dropdown_vars = ['ConnData','SynData','NumData','PhasicData','Connectivity','Stimulation']
@@ -498,24 +515,39 @@ def parameters_page(root):
             rows.append(row)
             
         return
-        
     
-    verifyBuildButton = tk.Button(top_option_frame, text="Verify Model Configuration", command=save)
+    def verify():
+        display_app_status('Not implemented')
+        return
+    
+    def generate_batch():
+        display_app_status('Not implemented')
+        return
+        
+    def import_model():
+        display_app_status('Not implemented')
+        return
+    
+    def export_model():
+        display_app_status('Not implemented')
+        return
+    
+    verifyBuildButton = tk.Button(top_option_frame, text="Verify Model Configuration", command=verify)
     verifyBuildButton.grid(column=1, row =0, padx=5, pady=5, sticky='W')
     
     saveButton = tk.Button(top_option_frame, text="Save Parameters File", command=save)
     saveButton.grid(column=0, row =0, padx=5, pady=5, sticky='W')
     
-    makeButton = tk.Button(top_option_frame, text="Generate Parallel Batch", command=save)
+    makeButton = tk.Button(top_option_frame, text="Generate Parallel Batch", command=generate_batch)
     makeButton.grid(column=2, row =0, padx=5, pady=5, sticky='W')
     
-    importButton = tk.Button(import_export_frame, text="Import Model", command=save)
+    importButton = tk.Button(import_export_frame, text="Import Model", command=import_model)
     importButton.grid(column=0, row =0, padx=5, pady=5, sticky='WE')
     
-    exportButton = tk.Button(import_export_frame, text="Export Model", command=save)
+    exportButton = tk.Button(import_export_frame, text="Export Model", command=export_model)
     exportButton.grid(column=0, row =1, padx=5, pady=5, sticky='WE')
     
-    df = read_parameters(params_file)
+    df = load(params_file)
     refresh(df)
     
 
@@ -555,6 +587,7 @@ def cells_page(root):
         cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
         pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
         pt.pack()
+        display_app_status('Cells file \"'+filename.get()+'\" loaded')
        
     def save():
         pt_df = pt.get_dataframe()
@@ -565,7 +598,7 @@ def cells_page(root):
         file.write(str(nr)+'\n')
         file.write(tb)
         file.close()
-        return
+        display_app_status('Cells file \"'+filename.get()+'\" saved')
     
     def new():
         if pt.has_changed():
@@ -594,8 +627,15 @@ def cells_page(root):
         filename.set(newfilename)
         
         pt.new()
+        display_app_status('Cells file \"'+newfilename+'\" created')
         
     def new_clone():
+        display_app_status('Cells file \"'+filename.get()+'\" created from clone of x')
+        display_app_status('Not implemented')
+        return
+    
+    def set_numdata_param():
+        display_app_status('Not implemented')
         return
 
     generate_files_available()
@@ -619,7 +659,7 @@ def cells_page(root):
     newButton.grid(column=0, row =0, padx=5, sticky='W')
     newCloneButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone,width=30)
     newCloneButton.grid(column=0, row =1, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as NumData parameter", command=save)
+    useButton = tk.Button(top_option_frame, text="Set as NumData parameter", command=set_numdata_param)
     useButton.grid(column=3, row =0, padx=5, sticky='W')
     
     
@@ -649,13 +689,28 @@ def connections_page(root):
             return pd.DataFrame(df1)
         
         def get_df(self):
-            return
+            pt_df = self.pt.get_dataframe()
+            (nr,nc) = pt_df.shape 
+            cols = list(range(1,nc))
+            df1 = pt_df[pt_df.columns[cols]]
+            data_column = pd.DataFrame(df1.values.reshape(nr*(nc-1),1))#.astype(float)
+            post_column = pd.DataFrame(pt_df[pt_df.columns[0]])
+            post_column = np.repeat(post_column[post_column.columns[0]],nc-1).reset_index(drop=True)
+            pre_column = list(pt_df)
+            del pre_column[0]
+            pre_column = pd.DataFrame(pre_column*nr)
+            df_ret = pd.concat([post_column, pre_column, data_column],axis=1)
+            df_ret.columns = range(df_ret.shape[1])
+            return df_ret
         
         def refresh(self, df, astype=None):
             self.pt.set_dataframe(self.read_internal(df, astype), show_delete_row=False,\
                                   show_header=True, show_numbering=False, \
                                   first_column_is_id=True)
             self.pt.pack()
+            
+        def has_changed(self):
+            return self.pt.has_changed()
       
     
     def raise_frame(frame):
@@ -710,7 +765,6 @@ def connections_page(root):
                 cellclasses_a.append(m.group(1))
     
     def load(*args):
-        #print ("loading: " + filename.get())
         df = pd.read_csv(filename.get() ,delimiter=' ',\
                        skiprows=1,header=None,\
                        names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
@@ -726,45 +780,95 @@ def connections_page(root):
         page2.grid(column=0,row=0,sticky='news')
         page3.grid(column=0,row=0,sticky='news')
         page1.grid(column=0,row=0,sticky='news')
-       
-    def save():
-        #pt_df = pt.get_dataframe()
-        #(nr,nc) = pt_df.shape 
-        #tb = pt_df.to_csv(sep=' ',header=False,index=False)
         
-        #file = open(filename.get(),"w")
-        #file.write(str(nr)+'\n')
-        #file.write(tb)
-        #file.close()
+        display_app_status('Connections Data file \"'+filename.get()+'\" loaded')
+       
+    def save():        
+        wei_df = synaptic_weight_page_obj.get_df()
+        con_df = convergence_page_obj.get_df()
+        syn_df = synapses_page_obj.get_df()
+        
+        head_df = pd.DataFrame(wei_df[wei_df.columns[0:2]])
+        
+        wei_df = pd.DataFrame(wei_df[wei_df.columns[2]]).astype('float')
+        wei_df.columns = [2]
+        
+        con_df = pd.DataFrame(con_df[con_df.columns[2]]).astype('float')
+        con_df.columns = [3]
+        
+        syn_df = pd.DataFrame(syn_df[syn_df.columns[2]]).astype('float')
+        syn_df.columns = [4]
+        
+        df = pd.concat([head_df, wei_df, con_df, syn_df],axis=1)
+        
+        (nr,nc) = df.shape
+        tb = df.to_csv(sep=' ',header=False,index=False,float_format='%.6f')
+                
+        file = open(filename.get(),"w")
+        file.write(str(nr)+'\n')
+        file.write(tb)
+        file.close()
+        
+        display_app_status('Connections Data file \"'+filename.get()+'\" saved')
         return
     
     def new():
-        #if pt.has_changed():
-        #    result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
-        #    if result != 'yes':
-        #        return
-        #d = DialogEntryBox(root,text="New File Name:")
-        #root.wait_window(d.top)
-        #
-        #if d.confirm==False:
-        #    return
         
-        #newfilename = dataset_folder+'\\'+cellnums_file_prefix+ d.value.get() + cellnums_file_postfix
-        #f = open(newfilename,"w+")
-        #f.close
+        if synaptic_weight_page_obj.has_changed() or convergence_page_obj.has_changed() or synapses_page_obj.has_changed():  
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        
+        
+        
+        
+        display_app_status('Connections Data file \"'+filename.get()+'\" created')
+        return
+    
+    def new_clone_current():
+        
+        display_app_status('Not implemented')
+        return
+        
+        if synaptic_weight_page_obj.has_changed() or convergence_page_obj.has_changed() or synapses_page_obj.has_changed():  
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        
+        
+        newfilename = os.path.join(dataset_folder,cellnums_file_prefix+ d.value.get() + cellnums_file_postfix)
+        f = open(newfilename,"w+")
+        f.close
         ##pt.new()
         #generate_files_available()
         ##https://stackoverflow.com/questions/17580218/changing-the-options-of-a-optionmenu-when-clicking-a-button
     
-        #m = fileMenu.children['menu']
-        #m.delete(0,tk.END)
-        #newvalues = options
-        #newvalues.append(newfilename)
-        #for val in newvalues:
-        #    m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
-        #filename.set(newfilename)
         
-        #pt.new()
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        newvalues.append(newfilename)
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+            
+        load()
+        filename.set(newfilename)
+        
+        
+        
+    
+    def set_conndata_param():
+        display_app_status('Not implemented')
         return
 
     #generate_files_available()
@@ -776,22 +880,20 @@ def connections_page(root):
     
     newFromCellsButton = tk.Button(top_option_frame, text="Generate from Cells File", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new,width=30)
+    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone_current,width=30)
     newFromCurrentButton.grid(column=0, row =1, padx=5, sticky='WE')
-    #newButton = tk.Button(top_option_frame, text="New", command=new)
-    #newButton.grid(column=1, row =0, padx=5, sticky='W')
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
     fileMenu.grid(column=2, row =0, padx=5, sticky='W')
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=3, row =0, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=save)
+    useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=set_conndata_param)
     useButton.grid(column=4, row =0, padx=5, sticky='W')
 
 
 
 def synapses_page(root):
     sections_list = ['dendrite_list','soma_list','apical_list','axon_list']
-    class connections_adapter(object):
+    class synapses_adapter(object):
         
         def __init__(self, root, col):
             self.root = root
@@ -800,19 +902,12 @@ def synapses_page(root):
             self.pt.pack()
             
         def read_internal(self, df):
-            '''get whole dataframe, return just a single nxn df'''
-            #df1 = df[df.columns[[0,1,self.col]]]
-            #pre = df1[df1.columns[0]].unique()
-            #pre = pd.DataFrame(pre)
-            #post = df1[df1.columns[1]].unique()
-            #vals = df1[df1.columns[2]]
-            #vals = pd.DataFrame(vals.values.reshape(len(pre),len(post)),columns=post)
-            #df1 = pd.concat([pre,vals],axis=1)
-            #print(df1)
+            '''get whole dataframe'''
             return df
         
         def get_df(self):
-            return
+            df = self.pt.get_dataframe().replace(np.nan, '', regex=True).replace('nan','',regex=True)
+            return df
         
         def refresh(self, df):
             d = defaultdict(list)
@@ -822,6 +917,9 @@ def synapses_page(root):
                                   first_column_is_id=False, immutable_values=["nan"],\
                                   options_dict=d)
             self.pt.pack()
+            
+        def has_changed(self):
+            return self.pt.has_changed()
       
     
     def raise_frame(frame):
@@ -842,31 +940,18 @@ def synapses_page(root):
     bottom_option_frame.grid(column=0,row=2,sticky='we')
    
     
-    page1 = tk.Frame(table_frame_internal)
-    #page2 = tk.Frame(table_frame_internal)
-    #page3 = tk.Frame(table_frame_internal)
-    
+    page1 = tk.Frame(table_frame_internal)   
     
     ######################################
-    
-    #pt = PandasTable(table_frame, show_add_row_button=True)
     
     cellclasses_a = []
     options = glob.glob(syndata_glob)
     
     d = defaultdict(list)
     d[1].append(cellclasses_a)
-            
     
     #tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0)
-    synaptic_weight_page_obj = connections_adapter(page1,2)
-    
-    #tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0)
-    #convergence_page_obj = connections_adapter(page2,3)#convergence_page(page2)
-    
-    #tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0)
-    #synapses_page_obj = connections_adapter(page3,4)#synapses_page(page3)
-    
+    synapses_page_obj = synapses_adapter(page1,2)
     
     ######################################
     
@@ -891,40 +976,39 @@ def synapses_page(root):
                                 "Tau1b", "Tau2b", "eb"])
     
         page1.grid_forget()
-        #page2.grid_forget()
-        #page3.grid_forget()
-        
-        synaptic_weight_page_obj.refresh(df)
-        #convergence_page_obj.refresh(df)
-        #synapses_page_obj.refresh(df)
-        
+        synapses_page_obj.refresh(df)
         page1.grid(column=0,row=0,sticky='news')
-        #page2.grid(column=0,row=0,sticky='news')
-        #page3.grid(column=0,row=0,sticky='news')
-        #pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
-        #pt.grid()
+        
+        display_app_status('Synapse Data file \"'+filename.get()+'\" loaded')
        
     def save():
-        #pt_df = pt.get_dataframe()
-        #(nr,nc) = pt_df.shape 
-        #tb = pt_df.to_csv(sep=' ',header=False,index=False)
+        pt_df = synapses_page_obj.get_df()
+        (nr,nc) = pt_df.shape 
         
-        #file = open(filename.get(),"w")
-        #file.write(str(nr)+'\n')
-        #file.write(tb)
-        #file.close()
+        #a = pd.DataFrame(pt_df[pt_df.columns[list(range(0,6))]])
+        #b = pd.DataFrame(pt_df[pt_df.columns[list(range(6,12))]]).astype('float')
+        #pt_df = pd.concat([a,b],axis=1)
+        
+        tb = pt_df.to_csv(sep=' ',header=False,index=False,float_format='%.6f')
+        
+        file = open(filename.get(),"w")
+        file.write(str(nr)+'\n')
+        file.write(tb)
+        file.close()
+        display_app_status('Synapse Data file \"'+filename.get()+'\" saved')
+        
         return
     
     def new():
-        #if pt.has_changed():
-        #    result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
-        #    if result != 'yes':
-        #        return
-        #d = DialogEntryBox(root,text="New File Name:")
-        #root.wait_window(d.top)
-        #
-        #if d.confirm==False:
-        #    return
+        if synapses_page_obj.has_changed():
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
         
         #newfilename = dataset_folder+'\\'+cellnums_file_prefix+ d.value.get() + cellnums_file_postfix
         #f = open(newfilename,"w+")
@@ -942,8 +1026,19 @@ def synapses_page(root):
         #filename.set(newfilename)
         
         #pt.new()
+        display_app_status('Synapse Data file \"'+filename.get()+'\" created')
+        display_app_status('Not implemented')
         return
 
+    def new_clone_current():
+        display_app_status('Not implemented')
+        return
+
+    def set_syndata_param():
+        display_app_status('Not implemented')
+        return
+    
+    
     #generate_files_available()
     
     #Create the choice option panel
@@ -953,7 +1048,7 @@ def synapses_page(root):
     
     newFromCellsButton = tk.Button(top_option_frame, text="Generate from Connection Weights", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new, width=30)
+    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone_current, width=30)
     newFromCurrentButton.grid(column=0, row =1, padx=5, sticky='WE')
     #newButton = tk.Button(top_option_frame, text="New", command=new)
     #newButton.grid(column=1, row =0, padx=5, sticky='W')
@@ -961,49 +1056,13 @@ def synapses_page(root):
     fileMenu.grid(column=2, row =0, padx=5, sticky='W')
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=3, row =0, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=save)
+    useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=set_syndata_param)
     useButton.grid(column=4, row =0, padx=5, sticky='W')
 
     return
 
 def phasic_page(root):
-    sections_list = ['dendrite_list','soma_list','apical_list','axon_list']
-    class connections_adapter(object):
-        
-        def __init__(self, root, col):
-            self.root = root
-            self.col = col
-            self.pt = PandasTable(self.root, show_add_row_button=False)
-            self.pt.pack()
-            
-        def read_internal(self, df):
-            '''get whole dataframe, return just a single nxn df'''
-            #df1 = df[df.columns[[0,1,self.col]]]
-            #pre = df1[df1.columns[0]].unique()
-            #pre = pd.DataFrame(pre)
-            #post = df1[df1.columns[1]].unique()
-            #vals = df1[df1.columns[2]]
-            #vals = pd.DataFrame(vals.values.reshape(len(pre),len(post)),columns=post)
-            #df1 = pd.concat([pre,vals],axis=1)
-            #print(df1)
-            return df
-        
-        def get_df(self):
-            return
-        
-        def refresh(self, df):
-            d = defaultdict(list)
-            d[3].append(sections_list)
-            self.pt.set_dataframe(self.read_internal(df), show_delete_row=True,\
-                                  show_header=True, show_numbering=True, \
-                                  first_column_is_id=False, immutable_values=["nan"],\
-                                  options_dict=d)
-            self.pt.pack()
-      
-    
-    def raise_frame(frame):
-        frame.tkraise()
-    
+           
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Phasic Stimulation")
     table_frame_internal = tk.Frame(table_frame)
@@ -1019,32 +1078,16 @@ def phasic_page(root):
     bottom_option_frame.grid(column=0,row=2,sticky='we')
    
     
-    page1 = tk.Frame(table_frame_internal)
-    #page2 = tk.Frame(table_frame_internal)
-    #page3 = tk.Frame(table_frame_internal)
-    
+    page1 = tk.Frame(table_frame_internal)    
     
     ######################################
-    
-    #pt = PandasTable(table_frame, show_add_row_button=True)
     
     cellclasses_a = []
     options = glob.glob(phasicdata_glob)
     
     d = defaultdict(list)
     d[1].append(cellclasses_a)
-            
-    
-    #tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0)
-    #synaptic_weight_page_obj = connections_adapter(page1,2)
-    
-    #tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0)
-    #convergence_page_obj = connections_adapter(page2,3)#convergence_page(page2)
-    
-    #tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0)
-    #synapses_page_obj = connections_adapter(page3,4)#synapses_page(page3)
-    
-    
+
     ######################################
     pt = PandasTable(table_frame_internal, show_add_row_button=False)
     
@@ -1058,60 +1101,42 @@ def phasic_page(root):
                 cellclasses_a.append(m.group(1))
     
     def load(*args):
-        #print ("loading: " + filename.get())
-        
-        #table_frame_internal.grid_forget()
         
         df = pd.read_csv(filename.get() ,delim_whitespace=True,\
                        skiprows=1,header=None,\
                        names = ["Cell","Max Frequency (Hz)","Noise",\
                                 "Depth","Phase"])
         
-    
-        
         pt.pack()
         pt.set_dataframe(df, show_delete_row=False,\
                                   show_header=True, show_numbering=True, \
                                   first_column_is_id=False, immutable_values=["nan"])
         
-        
-        
-    
-        #page1.grid_forget()
-        #page2.grid_forget()
-        #page3.grid_forget()
-        
-        #synaptic_weight_page_obj.refresh(df)
-        #convergence_page_obj.refresh(df)
-        #synapses_page_obj.refresh(df)
-        
-        #page1.grid(column=0,row=0,sticky='news')
-        #page2.grid(column=0,row=0,sticky='news')
-        #page3.grid(column=0,row=0,sticky='news')
-        #pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
-        #pt.grid()
+        display_app_status('Phasic Data file \"'+filename.get()+'\" loaded')
        
     def save():
-        #pt_df = pt.get_dataframe()
-        #(nr,nc) = pt_df.shape 
-        #tb = pt_df.to_csv(sep=' ',header=False,index=False)
+        pt_df = pt.get_dataframe()
+        (nr,nc) = pt_df.shape 
+        tb = pt_df.to_csv(sep=' ',header=False,index=False)
         
-        #file = open(filename.get(),"w")
-        #file.write(str(nr)+'\n')
-        #file.write(tb)
-        #file.close()
+        file = open(filename.get(),"w")
+        file.write(str(nr)+'\n')
+        file.write(tb)
+        file.close()
+        display_app_status('Phasic Data file \"'+filename.get()+'\" saved')
         return
     
-    def new():
-        #if pt.has_changed():
-        #    result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
-        #    if result != 'yes':
-        #        return
-        #d = DialogEntryBox(root,text="New File Name:")
-        #root.wait_window(d.top)
-        #
-        #if d.confirm==False:
-        #    return
+    def new_generate():
+        newfilename = ''
+        if pt.has_changed():
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
         
         #newfilename = dataset_folder+'\\'+cellnums_file_prefix+ d.value.get() + cellnums_file_postfix
         #f = open(newfilename,"w+")
@@ -1129,6 +1154,15 @@ def phasic_page(root):
         #filename.set(newfilename)
         
         #pt.new()
+        display_app_status('Phasic Data file \"'+ newfilename +'\" created')
+        return
+    
+    def new_clone_current():
+        display_app_status('Not implemented')
+        return
+
+    def set_phasicdata_param():
+        display_app_status('Not implemented')
         return
 
     #generate_files_available()
@@ -1138,49 +1172,62 @@ def phasic_page(root):
     filename.trace("w",load)
     filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate from Cells File", command=new, width=30)
+    newFromCellsButton = tk.Button(top_option_frame, text="Generate from Cells File", command=new_generate, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new, width=30)
+    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone_current, width=30)
     newFromCurrentButton.grid(column=0, row =1, padx=5, sticky='WE')
-    #newButton = tk.Button(top_option_frame, text="New", command=new)
-    #newButton.grid(column=1, row =0, padx=5, sticky='W')
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
     fileMenu.grid(column=2, row =0, padx=5, sticky='W')
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=3, row =0, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as PhasicData parameter", command=save)
+    useButton = tk.Button(top_option_frame, text="Set as PhasicData parameter", command=set_phasicdata_param)
     useButton.grid(column=4, row =0, padx=5, sticky='W')
 
     return
 
-def main():
-    root = tk.Tk()
-        
-    style = ttk.Style()
-    style.theme_create( "colored", parent="alt", settings={
-            "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
-            "TNotebook.Tab": {
-                "configure": {"padding": [5, 2], "background": "#D9D9D9" },
-                "map":       {"background": [("selected", "#C0C0E0")],
-                              "expand": [("selected", [1, 1, 1, 0])] } } } )
+def results_page(root):
+    l = tk.Label(root,text='Results to be displayed here, load in a run folder.\
+                 \nA graphics library will be written to display spike rasters, individual potentials, etc. ')
+    l.pack()
+    return
 
-    style.theme_create( "largertheme", parent="alt", settings={
-            "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
-            "TNotebook.Tab": {
-                "configure": {"padding": [5, 2] },
-                "map":       {
-                              "expand": [("selected", [1, 1, 1, 0])] } } } )
+def main(root):
     
-    style.theme_use("colored")
     
-    #root.resizable(0,0)
-    root.title("Neuron Network Model Configuration (University of Missouri - Neural Engineering Laboratory - Nair)")
-    root.geometry('1000x600')
-    #root.resizable(0,0)
-    root.config(menu=menu_bar(root))
+    style = ttk.Style()
+    try:
+        style.theme_create( "colored", parent="alt", settings={
+                "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
+                "TNotebook.Tab": {
+                    "configure": {"padding": [5, 2], "background": "#D9D9D9" },
+                    "map":       {"background": [("selected", "#C0C0E0")],
+                                  "expand": [("selected", [1, 1, 1, 0])] } } } )
     
-    nb = Autoresized_Notebook(root)
+        style.theme_create( "largertheme", parent="alt", settings={
+                "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
+                "TNotebook.Tab": {
+                    "configure": {"padding": [5, 2] },
+                    "map":       {
+                                  "expand": [("selected", [1, 1, 1, 0])] } } } )
+        style.theme_use("colored")
+    except Exception:
+        print('style')
+    
+    frame1 = tk.Frame(root)
+    frame1.grid(row=0,column=0,sticky='news')
+    frame1.columnconfigure(0,weight=1)
+    frame1.columnconfigure(0,weight=1)
+    frame2 = tk.Frame(root)
+    frame2.grid(row=1,column=0,sticky='news')
+    
+    nb = Autoresized_Notebook(frame1)
     nb.pack(padx=5,pady=5,side="left",fill="both",expand=True)
+    
+    bottom_status_bar = tk.Frame(frame2)
+    bottom_status_bar.grid(row=0,column=0,padx=5,pady=2)#,fill=tk.X,expand=True)
+    
+    label = tk.Label(bottom_status_bar,textvariable=app_status)
+    label.pack(expand=True)
 
     page1 = ttk.Frame(nb)
     page2 = ttk.Frame(nb)
@@ -1198,7 +1245,7 @@ def main():
     nb.add(page5, text='Phasic Stimulation')
     #nb.add(page6, text='Cell Builder')
     #nb.add(page7, text='Ion Channel Builder')
-    #nb.add(page8, text='Simulation Builder')
+    nb.add(page8, text='Run & Display Results')
     
     #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
     bind_page(page1, parameters_page)
@@ -1206,7 +1253,28 @@ def main():
     bind_page(page3, connections_page)
     bind_page(page4, synapses_page)
     bind_page(page5, phasic_page)
+    bind_page(page8, results_page)
     
+    display_app_status("Ready")
     root.mainloop()
 
-main()
+default_status = "Status: Ready"
+def reset_app_status():
+    app_status.set(default_status)
+
+def display_app_status(str):
+    app_status.set("Status: "+str)
+    threading.Timer(4.0, reset_app_status).start()
+
+root = tk.Tk()
+root.columnconfigure(0,weight=1)
+root.rowconfigure(0,weight=1)
+root.title("Neuron Network Model Configuration (University of Missouri - Neural Engineering Laboratory - Nair)")
+root.geometry('1000x600')
+#root.resizable(0,0)
+root.config(menu=menu_bar(root))
+
+app_status = tk.StringVar(root,'')
+reset_app_status()
+
+main(root)
