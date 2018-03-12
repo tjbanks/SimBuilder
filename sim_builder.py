@@ -341,7 +341,7 @@ def menu_bar(root):
         print("hello!")
         
     def about():
-        messagebox.showinfo("About", "Simulation Builder written for:\nProfessor Satish Nair's Neural Engineering Laboratory\nat The University of Missouri\n\nContributors:\nTyler Banks,Ben Latimer,Satish Nair\n\nInitial Neuron Code:  Bezaire et al (2016), ModelDB (accession number 187604), and McDougal et al (2017)", icon='info')
+        messagebox.showinfo("About", "Simulation Builder written for:\nProfessor Satish Nair's Neural Engineering Laboratory\nat The University of Missouri\n\nContributors:\nTyler Banks,Ben Latimer,Satish Nair\n\nInitial Neuron Code:  Bezaire et al (2016), ModelDB (accession number 187604), and McDougal et al (2017)\n\nEmail tbg28@mail.missouri.edu with questions", icon='info')
 
     menubar = tk.Menu(root)
     
@@ -589,12 +589,15 @@ def cells_page(root):
         pt.pack()
         display_app_status('Cells file \"'+filename.get()+'\" loaded')
        
-    def save():
+    def save(save_to=None):
         pt_df = pt.get_dataframe()
         (nr,nc) = pt_df.shape 
         tb = pt_df.to_csv(sep=' ',header=False,index=False)
         
-        file = open(filename.get(),"w")
+        if not save_to:
+            save_to = filename.get()
+        
+        file = open(save_to,"w")
         file.write(str(nr)+'\n')
         file.write(tb)
         file.close()
@@ -630,8 +633,33 @@ def cells_page(root):
         display_app_status('Cells file \"'+newfilename+'\" created')
         
     def new_clone():
-        display_app_status('Cells file \"'+filename.get()+'\" created from clone of x')
-        display_app_status('Not implemented')
+        
+        if pt.has_changed():  
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        
+        
+        newfilename = os.path.join(dataset_folder,cellnums_file_prefix+ d.value.get() + cellnums_file_postfix)
+        f = open(newfilename,"w+")
+        f.close()
+        save(save_to=newfilename)
+        
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        newvalues.append(newfilename)
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+        filename.set(newfilename)
+        
+    
+        display_app_status('Cells file \"'+filename.get()+'\" created')
         return
     
     def set_numdata_param():
@@ -649,18 +677,19 @@ def cells_page(root):
     filename.set(options[0])
     load()#initial load
     
-    fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=1, row =0, padx=5, sticky='W')
     
+    newButton = tk.Button(top_option_frame, text="New", command=new,width=30)
+    newButton.grid(column=0, row =0, padx=5, sticky='WE')
+    useButton = tk.Button(top_option_frame, text="Set as NumData parameter", command=set_numdata_param,width=30)
+    useButton.grid(column=0, row =1, padx=5, sticky='W')
+    
+    fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
+    fileMenu.grid(column=1, row =0, padx=5, sticky='WE',columnspan=2)    
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=2, row =0, padx=5, sticky='W')
-    newButton = tk.Button(top_option_frame, text="New", command=new,width=30)
-    newButton.grid(column=0, row =0, padx=5, sticky='W')
-    newCloneButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone,width=30)
-    newCloneButton.grid(column=0, row =1, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as NumData parameter", command=set_numdata_param)
-    useButton.grid(column=3, row =0, padx=5, sticky='W')
+    saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    newCloneButton = tk.Button(top_option_frame, text="Save As", command=new_clone)
+    newCloneButton.grid(column=2, row =1, padx=5, sticky='WE')
     
     
     
@@ -742,13 +771,13 @@ def connections_page(root):
     d[1].append(cellclasses_a)
             
     
-    tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0)
+    tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0,padx=4,pady=4)
     synaptic_weight_page_obj = connections_adapter(page1,2)
     
-    tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0)
+    tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0,padx=4,pady=4)
     convergence_page_obj = connections_adapter(page2,3)#convergence_page(page2)
     
-    tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0)
+    tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0,padx=4,pady=4)
     synapses_page_obj = connections_adapter(page3,4)#synapses_page(page3)
     
     
@@ -835,10 +864,33 @@ def connections_page(root):
         if d.confirm==False:
             return
         
+        #get all as presynaptic
+        #get all not artificial as postsynaptic
         
+        column_names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"]
+        cellnums_pd = pd.read_csv(os.path.join(dataset_folder,cellnums_file_prefix+'100'+cellnums_file_postfix) ,delimiter=' ',\
+                       skiprows=1,header=None,\
+                       names = column_names)
+        cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
         
+        pre = cellnums_pd[cellnums_pd.columns[0]].values.tolist()
+        (pre_nr,pre_nc) = pd.DataFrame(pre).shape
+        
+        post = cellnums_pd.loc[cellnums_pd[column_names[4]] == 0]
+        post = post[post.columns[0]]
+        post = pd.DataFrame(post)
+        (post_nr,post_nc) = post.shape
+        
+        post = np.repeat(post[post.columns[0]],pre_nr).reset_index(drop=True)
+        pre = pd.DataFrame(pre*post_nr)
+        
+        #create a presynaptic*postsynaptic by 5 pandas dataframe
+        #set all values to zero
+        #set first column
+        #set second column
         
         display_app_status('Connections Data file \"'+filename.get()+'\" created')
+        display_app_status('Not implemented.')
         return
     
     def new_clone_current():
@@ -882,16 +934,20 @@ def connections_page(root):
     filename.trace("w",load)
     filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate from Cells File", command=new, width=30)
-    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=2)
-    newFromCurrentButton = tk.Button(top_option_frame, text="Save as", command=new_clone_current)
-    newFromCurrentButton.grid(column=1, row =1, padx=5, sticky='WE')
+    newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Current Cells File", command=new, width=30)
+    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=1)
+    useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=set_conndata_param, width=30)
+    useButton.grid(column=0, row =1, padx=5, sticky='W')
+    
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=2, row =1, padx=5, sticky='W')
+    fileMenu.grid(column=1, row =0, padx=5, sticky='WE',columnspan=2)
+    
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=0, row =1, padx=5,pady=5, sticky='WE')
-    useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=set_conndata_param)
-    useButton.grid(column=2, row =0, padx=5, sticky='W')
+    saveButton.grid(column=1, row =1, padx=5,pady=5, sticky='WE')
+    newFromCurrentButton = tk.Button(top_option_frame, text="Save As", command=new_clone_current)
+    newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
+    
+    
 
 
 
@@ -985,7 +1041,7 @@ def synapses_page(root):
         
         display_app_status('Synapse Data file \"'+filename.get()+'\" loaded')
        
-    def save():
+    def save(save_to=None):
         pt_df = synapses_page_obj.get_df()
         (nr,nc) = pt_df.shape 
         
@@ -995,7 +1051,10 @@ def synapses_page(root):
         
         tb = pt_df.to_csv(sep=' ',header=False,index=False,float_format='%.6f')
         
-        file = open(filename.get(),"w")
+        if not save_to:
+            save_to=filename.get()
+        
+        file = open(save_to,"w")
         file.write(str(nr)+'\n')
         file.write(tb)
         file.close()
@@ -1035,8 +1094,34 @@ def synapses_page(root):
         return
 
     def new_clone_current():
-        display_app_status('Not implemented')
+        
+        if synapses_page_obj.has_changed():  
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        
+        
+        newfilename = os.path.join(dataset_folder,syndata_file_prefix+ d.value.get() + syndata_file_postfix)
+        f = open(newfilename,"w+")
+        f.close()
+        save(save_to=newfilename)
+        
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        newvalues.append(newfilename)
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+        filename.set(newfilename)
+        
+        display_app_status('Synapse Data file \"'+filename.get()+'\" was created')
         return
+        
 
     def set_syndata_param():
         display_app_status('Not implemented')
@@ -1050,18 +1135,19 @@ def synapses_page(root):
     filename.trace("w",load)
     filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate from Connection Weights", command=new, width=30)
+    newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Connection Weights", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone_current, width=30)
-    newFromCurrentButton.grid(column=0, row =1, padx=5, sticky='WE')
-    #newButton = tk.Button(top_option_frame, text="New", command=new)
-    #newButton.grid(column=1, row =0, padx=5, sticky='W')
+    useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=set_syndata_param, width=30)
+    useButton.grid(column=0, row =1, padx=5, sticky='W')
+        
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=2, row =0, padx=5, sticky='W')
+    fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=3, row =0, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=set_syndata_param)
-    useButton.grid(column=4, row =0, padx=5, sticky='W')
+    saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    newFromCurrentButton = tk.Button(top_option_frame, text="Save As", command=new_clone_current)
+    newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
+    
 
     return
 
@@ -1118,12 +1204,15 @@ def phasic_page(root):
         
         display_app_status('Phasic Data file \"'+filename.get()+'\" loaded')
        
-    def save():
+    def save(save_to=None):
         pt_df = pt.get_dataframe()
         (nr,nc) = pt_df.shape 
         tb = pt_df.to_csv(sep=' ',header=False,index=False)
         
-        file = open(filename.get(),"w")
+        if not save_to:
+            save_to = filename.get()
+        
+        file = open(save_to,"w")
         file.write(str(nr)+'\n')
         file.write(tb)
         file.close()
@@ -1162,7 +1251,32 @@ def phasic_page(root):
         return
     
     def new_clone_current():
-        display_app_status('Not implemented')
+        
+        if pt.has_changed():  
+            result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
+            if result != 'yes':
+                return
+        d = DialogEntryBox(root,text="New File Name:")
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        
+        
+        newfilename = os.path.join(dataset_folder,phasicdata_file_prefix+ d.value.get() + phasicdata_file_postfix)
+        f = open(newfilename,"w+")
+        f.close()
+        save(save_to=newfilename)
+        
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        newvalues.append(newfilename)
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+        filename.set(newfilename)
+        
+        display_app_status('Phasic Data file \"'+filename.get()+'\" was created')
         return
 
     def set_phasicdata_param():
@@ -1176,16 +1290,18 @@ def phasic_page(root):
     filename.trace("w",load)
     filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate from Cells File", command=new_generate, width=30)
+    newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Connection Weights", command=new_generate, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone_current, width=30)
-    newFromCurrentButton.grid(column=0, row =1, padx=5, sticky='WE')
+    useButton = tk.Button(top_option_frame, text="Set as PhasicData parameter", command=set_phasicdata_param, width=30)
+    useButton.grid(column=0, row =1, padx=5, sticky='W')
+        
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=2, row =0, padx=5, sticky='W')
+    fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=3, row =0, padx=5, sticky='W')
-    useButton = tk.Button(top_option_frame, text="Set as PhasicData parameter", command=set_phasicdata_param)
-    useButton.grid(column=4, row =0, padx=5, sticky='W')
+    saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    newFromCurrentButton = tk.Button(top_option_frame, text="Save As", command=new_clone_current)
+    newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
 
     return
 
