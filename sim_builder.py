@@ -764,11 +764,7 @@ def connections_page(root):
             if m:
                 cellclasses_a.append(m.group(1))
     
-    def load(*args):
-        df = pd.read_csv(filename.get() ,delimiter=' ',\
-                       skiprows=1,header=None,\
-                       names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
-        
+    def set_whole_df(df):
         page1.grid_forget()
         page2.grid_forget()
         page3.grid_forget()
@@ -780,10 +776,17 @@ def connections_page(root):
         page2.grid(column=0,row=0,sticky='news')
         page3.grid(column=0,row=0,sticky='news')
         page1.grid(column=0,row=0,sticky='news')
+    
+    def load(*args):
+        df = pd.read_csv(filename.get() ,delimiter=' ',\
+                       skiprows=1,header=None,\
+                       names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
+        
+        set_whole_df(df)
         
         display_app_status('Connections Data file \"'+filename.get()+'\" loaded')
        
-    def save():        
+    def get_whole_df():
         wei_df = synaptic_weight_page_obj.get_df()
         con_df = convergence_page_obj.get_df()
         syn_df = synapses_page_obj.get_df()
@@ -801,10 +804,18 @@ def connections_page(root):
         
         df = pd.concat([head_df, wei_df, con_df, syn_df],axis=1)
         
+        return df
+        
+    def save(save_to=None):     
+        
+        if not save_to:
+            save_to = filename.get()
+        
+        df = get_whole_df()
         (nr,nc) = df.shape
         tb = df.to_csv(sep=' ',header=False,index=False,float_format='%.6f')
                 
-        file = open(filename.get(),"w")
+        file = open(save_to,"w")
         file.write(str(nr)+'\n')
         file.write(tb)
         file.close()
@@ -832,9 +843,6 @@ def connections_page(root):
     
     def new_clone_current():
         
-        display_app_status('Not implemented')
-        return
-        
         if synaptic_weight_page_obj.has_changed() or convergence_page_obj.has_changed() or synapses_page_obj.has_changed():  
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
@@ -846,13 +854,10 @@ def connections_page(root):
             return
         
         
-        newfilename = os.path.join(dataset_folder,cellnums_file_prefix+ d.value.get() + cellnums_file_postfix)
+        newfilename = os.path.join(dataset_folder,conndata_file_prefix+ d.value.get() + conndata_file_postfix)
         f = open(newfilename,"w+")
-        f.close
-        ##pt.new()
-        #generate_files_available()
-        ##https://stackoverflow.com/questions/17580218/changing-the-options-of-a-optionmenu-when-clicking-a-button
-    
+        f.close()
+        save(save_to=newfilename)
         
         m = fileMenu.children['menu']
         m.delete(0,tk.END)
@@ -860,11 +865,10 @@ def connections_page(root):
         newvalues.append(newfilename)
         for val in newvalues:
             m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
-            
-        load()
         filename.set(newfilename)
         
-        
+        display_app_status('Connections Data file \"'+filename.get()+'\" was created')
+        return
         
     
     def set_conndata_param():
@@ -879,15 +883,15 @@ def connections_page(root):
     filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Generate from Cells File", command=new, width=30)
-    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    newFromCurrentButton = tk.Button(top_option_frame, text="Clone to New File", command=new_clone_current,width=30)
-    newFromCurrentButton.grid(column=0, row =1, padx=5, sticky='WE')
+    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=2)
+    newFromCurrentButton = tk.Button(top_option_frame, text="Save as", command=new_clone_current)
+    newFromCurrentButton.grid(column=1, row =1, padx=5, sticky='WE')
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=2, row =0, padx=5, sticky='W')
+    fileMenu.grid(column=2, row =1, padx=5, sticky='W')
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=3, row =0, padx=5, sticky='W')
+    saveButton.grid(column=0, row =1, padx=5,pady=5, sticky='WE')
     useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=set_conndata_param)
-    useButton.grid(column=4, row =0, padx=5, sticky='W')
+    useButton.grid(column=2, row =0, padx=5, sticky='W')
 
 
 
