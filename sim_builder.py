@@ -425,7 +425,7 @@ def parameters_page(root):
     params_file = os.path.join('setupfiles','parameters.hoc')
     
     top_option_frame = tk.LabelFrame(root, text="Management")
-    table_frame = tk.LabelFrame(root, text="Parameters")
+    table_frame = tk.Frame(root)
     import_export_frame = tk.LabelFrame(root, text="Import/Export")
     
     top_option_frame.grid(column=0,row=0,sticky='news',padx=10,pady=5)
@@ -453,7 +453,7 @@ def parameters_page(root):
             self.is_string = is_string
             
             frame = tk.Frame(self.root)
-            var = tk.Label(frame, text=variable ,width=20)
+            var = tk.Label(frame, text=variable ,width=20,background='light gray')
             var.config(relief=tk.GROOVE)
             var.grid(column=0, row=0, padx=5, sticky='WE') 
             
@@ -519,7 +519,25 @@ def parameters_page(root):
         
         return
     
+    general_frame = tk.LabelFrame(table_frame, text="General",fg="blue")
+    general_frame.grid(column=0,row=0,sticky='news',padx=10,pady=5)
+    dropdown_frame = tk.LabelFrame(table_frame, text="Data Sources",fg="blue")
+    dropdown_frame.grid(column=1,row=0,sticky='news',padx=10,pady=5)
+    space_frame = tk.LabelFrame(table_frame, text="Spacial Config",fg="blue")
+    space_frame.grid(column=0,row=1,sticky='news',padx=10,pady=5)
+    print_frame = tk.LabelFrame(table_frame, text="Print/Output",fg="blue")
+    print_frame.grid(column=1,row=2,sticky='news',padx=10,pady=5)
+    misc_frame = tk.LabelFrame(table_frame, text="Miscellaneous",fg="blue")
+    misc_frame.grid(column=0,row=2,sticky='news',padx=10,pady=5)
+    lfp_frame = tk.LabelFrame(table_frame, text="LFP Config",fg="blue")
+    lfp_frame.grid(column=1,row=1,sticky='news',padx=10,pady=5)
+    
+    
+    general_vars = ['RunName', 'Scale','SimDuration','StepBy','TemporalResolution','RandomVrest','RandomVinit']
+    space_vars = ['TransverseLength','LongitudinalLength','LayerHeights','SpatialResolution']
     dropdown_vars = ['ConnData','SynData','NumData','PhasicData','Connectivity','Stimulation']
+    print_vars = ['PrintVoltage','PrintTerminal','PrintConnDetails','PrintCellPositions','PrintConnSummary','CatFlag','EstWriteTime','NumTraces']
+    lfp_vars = ['lfp_dt','ElectrodePoint','ComputeNpoleLFP','ComputeDipoleLFP','LFPCellTypes','MaxEDist']
     
     def refresh(df):
         r1_index = 0
@@ -527,22 +545,44 @@ def parameters_page(root):
         param_changed(val=False)
         rows.clear()
         
+        padtopbot = 3
+        Row(general_frame).pack(pady=padtopbot-1)
+        Row(dropdown_frame).pack(pady=padtopbot-1)
+        Row(space_frame).pack(pady=padtopbot-1)
+        Row(print_frame).pack(pady=padtopbot-1)
+        Row(misc_frame).pack(pady=padtopbot-1)
+        Row(lfp_frame).pack(pady=padtopbot-1)
+        
         for i, row in df.iterrows():
             temp = []
             temp.append(row.tolist())
             temp = temp[0]
             #config(self, variable, value, comment, is_string):
-            row = Row(table_frame).config(temp[0],temp[1],temp[2],temp[3])
-            if temp[0] in dropdown_vars:
-                row.grid(column=1, row=r2_index,padx=5)
-                r2_index = r2_index+1
-            else:
-                row.grid(column=0, row=r1_index,padx=5)
-                r1_index = r1_index+1
-            rows.append(row)
-            #This is all pages to change
-            set_public_param(temp[0],row.v_value)
             
+            frame = misc_frame
+            if temp[0] in general_vars:
+                frame=general_frame
+            elif temp[0] in dropdown_vars:
+                frame=dropdown_frame
+            elif temp[0] in space_vars:
+                frame=space_frame
+            elif temp[0] in print_vars:
+                frame=print_frame
+            elif temp[0] in lfp_vars:
+                frame=lfp_frame
+            
+            #This is all pages to change
+            row = Row(frame).config(temp[0],temp[1],temp[2],temp[3])
+            row.pack(padx=10)
+            rows.append(row)
+            set_public_param(temp[0],row.v_value)
+    
+        Row(general_frame).pack(pady=padtopbot)
+        Row(dropdown_frame).pack(pady=padtopbot)
+        Row(space_frame).pack(pady=padtopbot)
+        Row(print_frame).pack(pady=padtopbot)
+        Row(misc_frame).pack(pady=padtopbot)
+        Row(lfp_frame).pack(pady=padtopbot)
         return
     
     def verify():
@@ -747,7 +787,7 @@ def connections_page(root):
             if astype:
                 vals = vals.astype(astype)
             df1 = pd.concat([pre,vals],axis=1)
-            df1[df1.columns[self.col]] = df1[df1.columns[self.col]]
+            #df1[df1.columns[self.col]] = df1[df1.columns[self.col]]
             return pd.DataFrame(df1)
         
         def get_df(self):
