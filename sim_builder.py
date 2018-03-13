@@ -22,6 +22,8 @@ except:
     from tkinter import ttk
     from tkinter import messagebox
 
+root = tk.Tk()
+
 dataset_folder = 'datasets'
 cells_folder = 'cells'
 
@@ -107,26 +109,28 @@ class CreateToolTip(object):
           
             
 class DialogEntryBox:
-    def __init__(self, parent, text="value"):
+    def __init__(self, parent, text="value", lefttext="",righttext=""):
 
         top = self.top = tk.Toplevel(parent)
-        top.geometry('200x100')
-        tk.Label(top, text=text).pack()
+        top.geometry('350x100')
+        tk.Label(top, text=text).grid(row=0,column=1,sticky="WE")
         
         self.value = tk.StringVar(top)
         self.confirm = False
         
+        tk.Label(top, text=lefttext,width=20, anchor="e").grid(row=1,column=0)
         self.e = tk.Entry(top,textvariable=self.value)
-        self.e.pack(padx=5)
-
+        self.e.grid(row=1,column=1,columnspan=2)
+        tk.Label(top, text=righttext).grid(row=1,column=3)
+        
         button_frame = tk.Frame(top)
-        button_frame.pack()
+        button_frame.grid(row=2,column=1)
         
         b = tk.Button(button_frame, text="Ok", command=self.ok)
-        b.grid(pady=5, padx=5, column=0, row=0)
+        b.grid(pady=5, padx=5, column=0, row=2, sticky="WE")
         
         b = tk.Button(button_frame, text="Cancel", command=self.cancel)
-        b.grid(pady=5, padx=5, column=1, row=0)
+        b.grid(pady=5, padx=5, column=1, row=2, sticky="WE")
 
     def ok(self):
         self.confirm = True
@@ -387,6 +391,30 @@ def bind_page(page, gen_frame):
     canvas.config(scrollregion=canvas.bbox("all"))
     
 
+params_dict = {'aaa':tk.StringVar(root,'bbb'),\
+               'loaded_cellnums':tk.StringVar(root,'none'),\
+               'loaded_conndata':tk.StringVar(root,'none'),\
+               'loaded_syndata':tk.StringVar(root,'none'),\
+               'loaded_phasicdata':tk.StringVar(root,'none')}
+
+def get_public_param(param):
+    try:
+        return params_dict[param].get()
+    except KeyError:
+        return None
+
+def set_public_param(param, strvar):
+    try:
+        params_dict[param].set(strvar)
+    except KeyError:
+        params_dict[param] = strvar
+    return
+
+def reset_public_params():
+    params_dict.clear()
+    return
+
+
 def parameters_page(root):
     '''
     Reads the parameters hoc file
@@ -511,8 +539,9 @@ def parameters_page(root):
             else:
                 row.grid(column=0, row=r1_index,padx=5)
                 r1_index = r1_index+1
-            
             rows.append(row)
+            #This is all pages to change
+            set_public_param(temp[0],row.v_value)
             
         return
     
@@ -568,6 +597,7 @@ def cells_page(root):
     cellclasses_a = []
     options = glob.glob(cellnums_glob)
     
+    
     def generate_files_available():
         cellclasses = glob.glob(cells_glob)
         cellclasses_a.clear()
@@ -587,6 +617,8 @@ def cells_page(root):
         cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
         pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
         pt.pack()
+        set_public_param("loaded_cellnums",filename.get())
+        
         display_app_status('Cells file \"'+filename.get()+'\" loaded')
        
     def save(save_to=None):
@@ -608,7 +640,7 @@ def cells_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, cellnums_file_prefix),righttext=cellnums_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -638,7 +670,7 @@ def cells_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, cellnums_file_prefix),righttext=cellnums_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -663,7 +695,8 @@ def cells_page(root):
         return
     
     def set_numdata_param():
-        display_app_status('Not implemented')
+        set_public_param("NumData", filename.get())
+        display_app_status('NumData parameter set in current parameters file')
         return
 
     generate_files_available()
@@ -675,6 +708,7 @@ def cells_page(root):
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
     filename.set(options[0])
+        
     load()#initial load
     
     
@@ -694,7 +728,6 @@ def cells_page(root):
     
     
 def connections_page(root):
-    
     
     class connections_adapter(object):
         
@@ -805,15 +838,21 @@ def connections_page(root):
         page2.grid(column=0,row=0,sticky='news')
         page3.grid(column=0,row=0,sticky='news')
         page1.grid(column=0,row=0,sticky='news')
+        
+        return
     
-    def load(*args):
-        df = pd.read_csv(filename.get() ,delimiter=' ',\
+    def load(*args,load_from=None):
+        if not load_from:
+            load_from = filename.get()
+            
+        df = pd.read_csv(load_from ,delimiter=' ',\
                        skiprows=1,header=None,\
                        names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
         
         set_whole_df(df)
         
         display_app_status('Connections Data file \"'+filename.get()+'\" loaded')
+        return
        
     def get_whole_df():
         wei_df = synaptic_weight_page_obj.get_df()
@@ -858,7 +897,7 @@ def connections_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, conndata_file_prefix),righttext=conndata_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -867,10 +906,15 @@ def connections_page(root):
         #get all as presynaptic
         #get all not artificial as postsynaptic
         
+        newfilename = os.path.join(dataset_folder,conndata_file_prefix+ d.value.get() + conndata_file_postfix)
+
+        loaded_cellnums = get_public_param("loaded_cellnums")
+        
         column_names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"]
-        cellnums_pd = pd.read_csv(os.path.join(dataset_folder,cellnums_file_prefix+'100'+cellnums_file_postfix) ,delimiter=' ',\
+        cellnums_pd = pd.read_csv(loaded_cellnums ,delimiter=' ',\
                        skiprows=1,header=None,\
                        names = column_names)
+        
         cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
         
         pre = cellnums_pd[cellnums_pd.columns[0]].values.tolist()
@@ -884,13 +928,28 @@ def connections_page(root):
         post = np.repeat(post[post.columns[0]],pre_nr).reset_index(drop=True)
         pre = pd.DataFrame(pre*post_nr)
         
+        df = pd.concat([post,pre],axis=1)
+        df[2] = '0.0'
+        df[3] = '0'
+        df[4] = '0'
+        
+        tb = df.to_csv(sep=' ',header=False,index=False,float_format='%.6f')
+                
+        file = open(newfilename,"w")
+        file.write(str(pre_nr*post_nr)+'\n')
+        file.write(tb)
+        file.close()
+        
+        load(load_from=newfilename)
+        
+        reload_files_and_set(newfilename)
+
         #create a presynaptic*postsynaptic by 5 pandas dataframe
         #set all values to zero
         #set first column
         #set second column
         
         display_app_status('Connections Data file \"'+filename.get()+'\" created')
-        display_app_status('Not implemented.')
         return
     
     def new_clone_current():
@@ -899,7 +958,7 @@ def connections_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, conndata_file_prefix),righttext=conndata_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -911,6 +970,18 @@ def connections_page(root):
         f.close()
         save(save_to=newfilename)
         
+        reload_files_and_set()
+        
+        display_app_status('Connections Data file \"'+filename.get()+'\" was created')
+        return
+        
+    
+    def set_conndata_param():
+        set_public_param("ConnData", filename.get())
+        display_app_status('ConnData parameter set in current parameters file')
+        return
+
+    def reload_files_and_set(newfilename):
         m = fileMenu.children['menu']
         m.delete(0,tk.END)
         newvalues = options
@@ -919,14 +990,6 @@ def connections_page(root):
             m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
         filename.set(newfilename)
         
-        display_app_status('Connections Data file \"'+filename.get()+'\" was created')
-        return
-        
-    
-    def set_conndata_param():
-        display_app_status('Not implemented')
-        return
-
     #generate_files_available()
     
     #Create the choice option panel
@@ -1067,7 +1130,7 @@ def synapses_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, syndata_file_prefix),righttext=syndata_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -1099,7 +1162,7 @@ def synapses_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, syndata_file_prefix),righttext=syndata_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -1124,7 +1187,8 @@ def synapses_page(root):
         
 
     def set_syndata_param():
-        display_app_status('Not implemented')
+        set_public_param("SynData", filename.get())
+        display_app_status('SynData parameter set in current parameters file')
         return
     
     
@@ -1225,7 +1289,7 @@ def phasic_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, phasicdata_file_prefix),righttext=phasicdata_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -1256,7 +1320,7 @@ def phasic_page(root):
             result = messagebox.askquestion("New", "Are you sure? Data has been changed.", icon='warning')
             if result != 'yes':
                 return
-        d = DialogEntryBox(root,text="New File Name:")
+        d = DialogEntryBox(root,text="New File Name:",lefttext=os.path.join(dataset_folder, phasicdata_file_prefix),righttext=phasicdata_file_postfix)
         root.wait_window(d.top)
         
         if d.confirm==False:
@@ -1280,7 +1344,8 @@ def phasic_page(root):
         return
 
     def set_phasicdata_param():
-        display_app_status('Not implemented')
+        set_public_param("PhasicData", filename.get())
+        display_app_status('PhasicData parameter set in current parameters file')
         return
 
     #generate_files_available()
@@ -1386,7 +1451,7 @@ def display_app_status(str):
     app_status.set("Status: "+str)
     threading.Timer(4.0, reset_app_status).start()
 
-root = tk.Tk()
+
 root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
 root.title("Neuron Network Model Configuration (University of Missouri - Neural Engineering Laboratory - Nair)")
