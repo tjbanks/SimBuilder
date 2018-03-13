@@ -540,8 +540,6 @@ def parameters_page(root):
     lfp_vars = ['lfp_dt','ElectrodePoint','ComputeNpoleLFP','ComputeDipoleLFP','LFPCellTypes','MaxEDist']
     
     def refresh(df):
-        r1_index = 0
-        r2_index = 0
         param_changed(val=False)
         rows.clear()
         
@@ -588,10 +586,6 @@ def parameters_page(root):
     def verify():
         display_app_status('Not implemented')
         return
-    
-    def generate_batch():
-        display_app_status('Not implemented')
-        return
         
     def import_model():
         display_app_status('Not implemented')
@@ -606,9 +600,7 @@ def parameters_page(root):
     
     saveButton = tk.Button(top_option_frame, text="Save Parameters File", command=save)
     saveButton.grid(column=0, row =0, padx=5, pady=5, sticky='W')
-    
-    makeButton = tk.Button(top_option_frame, text="Generate Parallel Batch", command=generate_batch)
-    makeButton.grid(column=2, row =0, padx=5, pady=5, sticky='W')
+
     
     importButton = tk.Button(import_export_frame, text="Import Model", command=import_model)
     importButton.grid(column=0, row =0, padx=5, pady=5, sticky='WE')
@@ -1411,9 +1403,75 @@ def phasic_page(root):
     return
 
 def results_page(root):
-    l = tk.Label(root,text='Results to be displayed here, load in a run folder.\
+        
+    buildrun_frame = tk.LabelFrame(root, text="Run Model")
+    results_frame = tk.LabelFrame(root, text="Results")
+    console_frame = tk.LabelFrame(root, text="Console Output")
+        
+    buildrun_frame.grid(column=0,row=0,sticky='NEWS',padx=10,pady=5)
+    results_frame.grid(column=0,row=1,sticky='NEWS',padx=10,pady=5)
+    console_frame.grid(column=1, row=0, rowspan=2, sticky='NEWS')
+    
+    #######Build Section
+    ##############################
+    
+    def generate_batch():
+        #Create popup with questions for batch, with defaults loaded from json file
+        display_app_status('Not implemented')
+        return
+    
+    def build_run_batch():
+        generate_batch()
+        
+    def local_run():
+        display_app_status('Not implemented')
+        return
+    
+    buildButton = tk.Button(buildrun_frame, text="Build Parallel Batch", command=generate_batch)
+    buildButton.grid(column=0, row =0, padx=5, pady=5, sticky='WE')
+    
+    buildrunButton = tk.Button(buildrun_frame, text="Build & Run Parallel Batch", command=build_run_batch)
+    buildrunButton.grid(column=0, row =1, padx=5, pady=5, sticky='WE')
+    
+    localrunButton = tk.Button(buildrun_frame, text="Run Locally on this Machine", command=local_run)
+    localrunButton.grid(column=2, row =0, padx=5, pady=5, sticky='WE')
+    
+    ##############################
+    
+    
+    ######Results section
+    ##############################
+    
+    def generate_spike_raster():
+        display_app_status('Not implemented')
+        return
+    
+    r = tk.Label(results_frame,text='Results to be displayed here, load in a run folder.\
                  \nA graphics library will be written to display spike rasters, individual potentials, etc. ')
-    l.pack()
+    r.grid(column=0, row =0)
+        
+    localrunButton = tk.Button(results_frame, text="Generate Spike Raster", command=generate_spike_raster)
+    localrunButton.grid(column=0, row =1, padx=5, pady=5, sticky='W')
+    
+    ##############################
+    
+    ######Console section
+    ##############################
+    
+    c = tk.Label(console_frame,text='Live output for current run.')
+    c.grid(column=0, row=0)
+    
+    console = tk.Text(console_frame)
+    console.config(width= 50, height=25, bg='black',fg='light green')
+    console.grid(column=0, row=1, padx=5, pady=5, sticky='NEWS')
+    
+    console.configure(state='normal')
+    console.insert('end', '> batch.sh\n')
+    console.insert('end', '> nrnivmodl\n')
+    console.insert('end', '> nrniv main.hoc\n')
+    console.configure(state='disabled')
+    
+    ##############################
     return
 
 def main(root):
@@ -1496,6 +1554,7 @@ root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
 root.title("Neuron Network Model Configuration (University of Missouri - Neural Engineering Laboratory - Nair)")
 root.geometry('1000x600')
+
 #root.resizable(0,0)
 root.config(menu=menu_bar(root))
 
