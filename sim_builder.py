@@ -149,7 +149,7 @@ class PandasTable(tk.Frame):
     entities_arr = [] #all entities in the rows
     deleted_rows = [] #keep track of what has been deleted, since we don't really delete
     '''
-    def __init__(self, widget, show_add_row_button=True):
+    def __init__(self, widget, show_add_row_button=True, allow_sorting=True):
         super(PandasTable, self).__init__(widget)
         self.root = tk.Frame(widget,padx=5,pady=5)
         self.table_frame_internal = tk.Frame(self.root,background='white')
@@ -170,6 +170,9 @@ class PandasTable(tk.Frame):
         self.immutable_values = []
         self.hidden_columns = []
         self.col_width=15
+        self.last_sort_by = True
+        self.last_sort_by_col = ''
+        self.allow_sorting = allow_sorting
         self.init_tools()
         return
     
@@ -193,6 +196,25 @@ class PandasTable(tk.Frame):
         self.set_changed(True)
     def has_changed(self):
         return self.data_changed
+    
+    
+    def sort_by(self, col):
+        if not self.allow_sorting:
+            return
+        
+        if self.last_sort_by_col is col:
+            self.last_sort_by = not self.last_sort_by #sort decending
+        else:
+            self.last_sort_by = True
+        
+        self.last_sort_by_col = col
+            
+        sorted_df = self.df.sort_values(by=[col], ascending=self.last_sort_by)
+        self.set_dataframe(sorted_df, self.options_dict, 
+                      self.show_header, self.show_numbering, 
+                      self.show_delete_row, self.first_column_is_header, 
+                      self.first_column_is_id, self.immutable_columns, 
+                      self.immutable_values, self.hidden_columns)
        
     def set_dataframe(self, df, options_dict = defaultdict(list), \
                       show_header=True, show_numbering=True, \
@@ -200,6 +222,7 @@ class PandasTable(tk.Frame):
                       first_column_is_id= False, immutable_columns=[],\
                       immutable_values=[], hidden_columns=[]):
         '''Totally wipe the slate and display a new dataframe'''
+        self.df = df
         self.data_changed = False
         self.show_header = show_header
         self.show_numbering = show_numbering
@@ -228,6 +251,7 @@ class PandasTable(tk.Frame):
                     continue
                 var = tk.Label(self.table_frame_internal, text=n)
                 var.config(width=self.col_width,relief=tk.GROOVE,background='light gray')
+                var.bind("<Button-1>", lambda event, col=n:self.sort_by(col))
                 var.grid(column=k+3, row =0, padx=1, sticky='NEWS')
                 
         for i, row in df.iterrows():
@@ -766,7 +790,7 @@ def connections_page(root):
         def __init__(self, root, col):
             self.root = root
             self.col = col
-            self.pt = PandasTable(self.root, show_add_row_button=False)
+            self.pt = PandasTable(self.root, show_add_row_button=False, allow_sorting=False)
             self.pt.pack()
             
         def read_internal(self, df, astype=None):
@@ -1129,7 +1153,11 @@ def synapses_page(root):
                                 "Minimum Distance", "Maximum Distance",\
                                 "Tau1a", "Tau2a", "ea",\
                                 "Tau1b", "Tau2b", "eb"])
-    
+        cols = list(df.columns.values) #switch pre and post synaptic 
+        cols.insert(0, cols.pop(1))
+        df = df[cols]
+        
+        
         page1.grid_forget()
         synapses_page_obj.refresh(df)
         page1.grid(column=0,row=0,sticky='news')
@@ -1138,6 +1166,11 @@ def synapses_page(root):
        
     def save(save_to=None):
         pt_df = synapses_page_obj.get_df()
+        
+        cols = list(pt_df.columns.values) #switch pre and post synaptic 
+        cols.insert(0, cols.pop(1))
+        pt_df = pt_df[cols]
+        
         (nr,nc) = pt_df.shape 
         
         #a = pd.DataFrame(pt_df[pt_df.columns[list(range(0,6))]])
