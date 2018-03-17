@@ -7,6 +7,10 @@ Created on Sat Feb 24 23:26:54 2018
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
 import os
 import re
 import glob
@@ -26,6 +30,7 @@ root = tk.Tk()
 
 dataset_folder = 'datasets'
 cells_folder = 'cells'
+results_folder = 'results'
 
 cellnums_file_prefix = 'cellnumbers_'
 cellnums_file_postfix = '.dat'
@@ -35,11 +40,14 @@ syndata_file_prefix = 'syndata_'
 syndata_file_postfix = '.dat'
 phasicdata_file_prefix = 'phasic_'
 phasicdata_file_postfix = '.dat'
+trace_file_prefix = 'trace_'
+trace_file_postfix = '.dat'
 
 cellnums_glob = os.path.join(dataset_folder,cellnums_file_prefix + '*' + cellnums_file_postfix)
 connections_glob = os.path.join(dataset_folder, conndata_file_prefix +'*'+ conndata_file_postfix)
 syndata_glob = os.path.join(dataset_folder, syndata_file_prefix + '*' + syndata_file_postfix)
 phasicdata_glob = os.path.join(dataset_folder, phasicdata_file_prefix + '*' + phasicdata_file_postfix)
+results_glob = os.path.join(results_folder,'*','')
 
 cells_glob = cells_folder+'/class_*.hoc'
 
@@ -123,7 +131,11 @@ class DialogEntryBox:
         self.confirm = False
         
         tk.Label(top, text=lefttext,width=20, anchor="e").grid(row=1,column=0)
-        self.e = tk.Entry(top,textvariable=self.value)
+        
+        vcmd = (top.register(self.validate),
+                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+        
+        self.e = tk.Entry(top,textvariable=self.value, validate = 'key', validatecommand = vcmd)
         self.e.grid(row=1,column=1,columnspan=2)
         tk.Label(top, text=righttext).grid(row=1,column=3)
         
@@ -135,6 +147,23 @@ class DialogEntryBox:
         
         b = tk.Button(button_frame, text="Cancel", command=self.cancel)
         b.grid(pady=5, padx=5, column=1, row=2, sticky="WE")
+        
+        tk.Label(top, text="Numbers only currently",width=20, anchor="w",fg='blue').grid(row=3,column=1,columnspan=2)
+        
+    def validate(self, action, index, value_if_allowed,
+                       prior_value, text, validation_type, trigger_type, widget_name):
+        print(text)
+        print(value_if_allowed)
+        if text in '0123456789-':
+            try:
+                if value_if_allowed is '':
+                    return True
+                float(value_if_allowed)
+                return True
+            except ValueError:
+                return False
+        else:
+            return False
 
     def ok(self):
         self.confirm = True
@@ -642,7 +671,7 @@ def parameters_page(root):
 
 def cells_page(root):
     
-    column_names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"]
+    column_names = ["Friendly Cell Name", "Cell File Name", "Number of Cells", "Layer Index","Artificial:1 Real:0"]
     
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Cell Numbers")
@@ -790,9 +819,10 @@ def connections_page(root):
     
     class connections_adapter(object):
         
-        def __init__(self, root, col):
+        def __init__(self, root, col, text=''):
             self.root = root
             self.col = col
+            tk.Label(root, text=text ,fg='blue').pack(anchor='w')
             self.pt = PandasTable(self.root, show_add_row_button=False, allow_sorting=False)
             self.pt.pack()
             
@@ -864,13 +894,16 @@ def connections_page(root):
             
     
     tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0,padx=4,pady=4)
-    synaptic_weight_page_obj = connections_adapter(page1,2)
+    text = 'Synaptic weight refers to the strength of a connection between two nodes, corresponding in biology to the influence the firing neuron on another neuron.'
+    synaptic_weight_page_obj = connections_adapter(page1,2,text=text)
     
     tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0,padx=4,pady=4)
-    convergence_page_obj = connections_adapter(page2,3)#convergence_page(page2)
+    text = 'Convergence defines the *total* number of connections to be randomly distributed between the presynaptic type and the postsynaptic type neuron.'
+    convergence_page_obj = connections_adapter(page2,3,text)#convergence_page(page2)
     
     tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0,padx=4,pady=4)
-    synapses_page_obj = connections_adapter(page3,4)#synapses_page(page3)
+    text = 'Synapses per connection to be made.'
+    synapses_page_obj = connections_adapter(page3,4,text)#synapses_page(page3)
     
     
     ######################################
@@ -1388,7 +1421,7 @@ def synapses_page(root):
     filename.trace("w",load)
     filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Connection Weights", command=new, width=30)
+    newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
     useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=set_syndata_param, width=30)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
@@ -1561,7 +1594,7 @@ def phasic_page(root):
 def results_page(root):
         
     buildrun_frame = tk.LabelFrame(root, text="Run Model")
-    results_frame = tk.LabelFrame(root, text="Results")
+    results_frame = tk.LabelFrame(root, text="General Results")
     console_frame = tk.LabelFrame(root, text="Console Output")
         
     buildrun_frame.grid(column=0,row=0,sticky='NEWS',padx=10,pady=5)
@@ -1598,16 +1631,101 @@ def results_page(root):
     ######Results section
     ##############################
     
+    class ShowGraphBox:
+        def __init__(self, parent, df, plottype='line', text="Graph Area"):
+    
+            top = self.top = tk.Toplevel(parent)
+            top.geometry('510x430')
+            top.resizable(0,0)
+            #tk.Label(top, text='Create new synapse:').grid(row=0,column=0,sticky="WE",columnspan=2)
+            lf = ttk.Labelframe(top, text=text)
+            lf.grid(row=4, column=0, sticky='nwes', padx=3, pady=3)
+            
+            fig = Figure(figsize=(5,4), dpi=100)
+            ax = fig.add_subplot(111)
+            
+            #df.plot(x='t', y='s', ax=ax)
+            df.plot(kind=plottype, ax=ax)
+            canvas = FigureCanvasTkAgg(fig, master=lf)
+            canvas.show()
+            canvas.get_tk_widget().grid(row=0, column=0)
+        
     def generate_spike_raster():
         display_app_status('Not implemented')
         return
-    
-    r = tk.Label(results_frame,text='Results to be displayed here, load in a run folder.\
-                 \nA graphics library will be written to display spike rasters, individual potentials, etc. ')
-    r.grid(column=0, row =0)
+    selected = {}
+    #selected = ['trace_hco10.dat', 'trace_hco21.dat']
+    def display_spike_train():
+        cells_v = {}
+        #for fn in selected:
+        for fn, value in selected.items():
+            #filename = os.path.join(foldername.get(), fn)
+            if value.get() is 0:
+                continue
+            df = pd.read_csv(fn ,delim_whitespace=True,\
+                           skiprows=1,header=None,\
+                           names = ['Time', 'voltage'])
+            cellname = ''
+            search = 'trace_(.+?).dat'
+            m = re.search(search,fn)
+            if m:
+                cellname = m.group(1)
+            cells_v[cellname] = list(df['voltage'])
         
-    localrunButton = tk.Button(results_frame, text="Generate Spike Raster", command=generate_spike_raster)
-    localrunButton.grid(column=0, row =1, padx=5, pady=5, sticky='W')
+        #print(cells_v)
+        df_p = pd.DataFrame(cells_v, index=df['Time'])
+        
+        ShowGraphBox(results_frame, df_p)
+        print(df_p)
+        return
+    
+    def display_spike_train_orig():
+        filename = os.path.join(foldername.get(), 'trace_hco10.dat')
+        df = pd.read_csv(filename ,delim_whitespace=True,\
+                       skiprows=1,header=None,\
+                       names = ['Time', 'hco1'])
+        
+        df_p = pd.DataFrame(list(df['hco1']), index=df['Time'], columns=['hco1'])
+        
+        ShowGraphBox(results_frame, df_p)
+        return
+    
+    def load_results(*args):
+        selected.clear()
+        
+        for widget in cellslistbox.winfo_children():
+            widget.destroy()
+        results_trace_glob = os.path.join(foldername.get(),trace_file_prefix + '*' + trace_file_postfix)
+        available_traces = glob.glob(results_trace_glob)
+                
+        for i,trace in enumerate(available_traces):
+            var1 = tk.IntVar()
+            selected[trace] = var1
+            tk.Checkbutton(cellslistbox, text=trace, variable=var1).grid(row=i, sticky='w')
+        return
+        
+        
+    result_options = glob.glob(results_glob)
+    foldername = tk.StringVar(results_frame)
+    foldername.set('')#result_options[0])
+    foldername.trace("w",load_results)
+    
+    
+    
+    r = tk.Label(results_frame,text='Current results loaded: ')
+    r.grid(column=0, row =0)
+    
+    fileMenu = tk.OptionMenu(results_frame, foldername, *result_options)
+    fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    
+    cellslistbox = tk.LabelFrame(results_frame, text='Cell Traces')
+    cellslistbox.grid(column=0,row=1,padx=5,sticky='WE',rowspan=99)
+        
+    localrunButton = tk.Button(results_frame, text="Show Spike Raster for all", command=generate_spike_raster)
+    localrunButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    
+    localrunButton = tk.Button(results_frame, text="Show Spike Activity for selected", command=display_spike_train)
+    localrunButton.grid(column=1, row =2, padx=5, pady=5, sticky='WE')
     
     ##############################
     
@@ -1708,7 +1826,7 @@ def display_app_status(str):
 
 root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
-root.title("Neuron Network Model Configuration (University of Missouri - Neural Engineering Laboratory - Nair)")
+root.title("Generalized Neuron Network Model (University of Missouri - Neural Engineering Laboratory - Nair)")
 root.geometry('1000x600')
 
 #root.resizable(0,0)
