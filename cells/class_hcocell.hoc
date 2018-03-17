@@ -1,6 +1,6 @@
 // Replace all USER_DEFINED_SECTIONs
 
-begintemplate HCOcell //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
+begintemplate hcocell //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
 public init, connect_sections, size_sections, append_sections
 public mechinit, insert_mechs, set_biophys, get_root
 public  pre_list, connect_pre, is_art, is_connected, gid, randi
@@ -25,7 +25,7 @@ NumApical=0
 NumBasal=0
 NumAxon=0
 
-create soma
+create soma[NumSoma]
 
 //END_USER_DEFINED_SECTION
 	
@@ -35,7 +35,7 @@ proc init() {
 	
 	
 	/////// geometrical properties //////
-	soma {
+	soma[0] {
 		nseg=1	// create only one segment in the soma
 		// gives area of .628e-3 cm^2
 		L=1000		// (micrometer)
@@ -43,7 +43,7 @@ proc init() {
 		}
 	
 	/////// biophysical properties //////
-	soma {
+	soma[0] {
 		cm = 1	// (microF/cm2)
 		
 		//insert the appropriate channels and give them reversal potentials and conductances
@@ -112,6 +112,10 @@ proc connect_sections() { local i
 	
 }
 
+proc size_sections() { local i
+
+}
+
 objref all, basal_list, apical_list, dendrite_list, soma_list, axon_list
 
 proc append_sections() { local i
@@ -134,8 +138,8 @@ proc append_sections() { local i
 	// }
 	//BEGIN_USER_DEFINED_SECTION
 	
-	soma all.append()
-	soma soma_list.append()
+	soma[0] all.append()
+	soma[0] soma_list.append()
 	
 	//END_USER_DEFINED_SECTION
 }
@@ -291,4 +295,4 @@ proc define_synapses() {
 		findme = 1
 	}
 }
-endtemplate template //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
+endtemplate hcocell  //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
