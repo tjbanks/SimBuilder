@@ -94,6 +94,12 @@ proc append_sections() { local i
 	//END_USER_DEFINED_SECTION
 }
 
+proc size_sections() { local i
+	//BEGIN_USER_DEFINED_SECTION
+	
+	//END_USER_DEFINED_SECTION
+}
+
 external lambda_f
 proc set_nseg() {
   	forsec all { nseg = int((L/(0.1*lambda_f(100))+.9)/2)*2 + 1  }
