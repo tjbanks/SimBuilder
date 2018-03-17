@@ -1,0 +1,202 @@
+begintemplate axoaxoniccell
+public init, connect_sections, size_sections, append_sections, define_synapses, connect2target, connect2target1
+public mechinit, insert_mechs, set_biophys, get_root
+public  pre_list, connect_pre, is_art, is_connected, gid, randi
+public soma, dend
+public all, basal_list, apical_list, soma_list, axon_list, dendrite_list
+public x, y, z, position, myroot, myrootsec, Vrest
+public NumSoma, NumApical, NumBasal, NumAxon
+public ncl, synlist
+objref ncl, synlist
+
+// create the sections[segments]
+NumSoma=1
+NumApical=16
+NumBasal=0
+NumAxon=0
+create soma[NumSoma], dend[NumApical]
+
+proc init() {
+	
+	ncl = new List()
+	synlist =new List()	
+	
+	// morphology
+	connect_sections()	// local fcn: connect soma, dendrites, axon initial segment
+	define_shape()		// builtin fcn: fill in 3d info for sections defined by only L and diam, translate 3d points for consistency with their connections 
+  	append_sections()	// local fcn: append all sections to the section list
+
+	// electrophysiology
+	mechinit()			// local fcn: set values for max conductances and reversal potentials of ion channels and other ephys parameters that are subject to fitting
+	insert_mechs()		// local fcn: insert ion channels and actually set values determined in the mechinit fcn
+	set_chanparams()	// local fcn: after all channels have been inserted, then their other parameters can be set	
+	
+	soma {nseg = 1 L = 30 diam = 25} 
+	for i=0,15 {
+		dend[i] {nseg = 1 L = 30 diam = 30}
+	}
+	
+
+}
+
+
+proc connect_sections() { local i
+ 	connect dend[0](0), soma(1)
+	for i=0,3 {
+		connect dend[i+1](0), dend[i](1)
+	}
+
+  	connect dend[5](0), soma(1)
+	for i=5,8 {
+		connect dend[i+1](0), dend[i](1)
+	}
+	
+  	connect dend[10](0), soma(0)
+	for i=10,11 {
+		connect dend[i+1](0), dend[i](1)
+	}
+
+  	connect dend[13](0), soma(0)
+	for i=13,14 {
+		connect dend[i+1](0), dend[i](1)
+	}
+}
+
+objref all, basal_list, apical_list, dendrite_list, soma_list, axon_list
+proc append_sections() { local i
+	objref all, basal_list, apical_list, dendrite_list, soma_list, axon_list
+
+	all = new SectionList()
+	basal_list = new SectionList()
+	apical_list = new SectionList()
+	soma_list = new SectionList()
+	axon_list = new SectionList()
+	dendrite_list = new SectionList()
+
+	soma all.append()
+	soma soma_list.append()
+	for i=0,15 {
+		dend[i] all.append()
+		dend[i] dendrite_list.append()
+	}
+
+	for i=0,9 {
+		dend[i] apical_list.append()
+	}
+
+	for i=10,15 {
+		dend[i] basal_list.append()
+	}
+}
+
+
+
+proc mechinit() {
+
+	// resting membrane potential. Must lie between Na+ and K+ reversal potentials
+	Vrest=-65
+	
+	// Temperature of simulation
+	celsius = 34.0
+
+	// Membrane resistance in ohm*cm2
+	RmDend = 5555 //1/0.00018
+	RmSoma = 5555 //1/0.00018
+
+	// Membrane capacitance in uF/cm2
+	CmSoma= 1.4
+	CmDend = 1.4
+
+	// Axial resistance in ohm*cm
+	RaDend= 100
+	RaSoma= 100	
+	
+	// Calcium concentrations in mM
+	ca_outside = 2
+	ca_inside = 5.e-6 // 50.e-6
+	catau = 10
+
+	// reversal potentials in mV
+	ekval = -90	
+	enaval = 55
+	//eHCNval = -30
+	ecaval = 8.314*(273.15+celsius)/(2*9.649e4)*log(ca_outside/ca_inside)*1000 // about 170, otherwise set to 130
+	
+	if (Vrest<ekval) Vrest=ekval // Cell cannot rest lower than K+ reversal potential
+	if (Vrest>enaval) Vrest=enaval // Cell cannot rest higher than Na+ reversal potential
+	eleakval = Vrest
+
+	// max ion channel conductances in mho/cm2
+	gNav     = 0.15 // soma: // 0.12 //original 0.030 to .055 ; lm: //0.5  	//original 0.015
+	gKdr     = 0.013    // Delayed rectifier potassium
+	//gKGroup  = 0 //0.1465/1
+	gKvA 	 = 0.00015 // Proximal A-type potassium
+	//gHCN     = 0.00002 // HCN (hyperpolarization-activated cyclic nucleotide-gated channel)
+	gCavN    = 0.0008 //   T-type calcium
+	gCavL    = 0.005 //  L-type calcium
+	gKvCaB	 = 0.0000002 // Big potassium channel: voltage and calcium gated 
+	gKCaS	 = 0.000002 //  Small potassium channel: calcium gated		
+}
+
+proc insert_mechs() {
+
+	forsec all {		
+		insert ch_KvA
+		gmax_ch_KvA = gKvA		// A-type K+ conductance
+		
+		insert ch_CavN  			// N-type Ca2+ conductance
+		gmax_ch_CavN = gCavN
+		
+		insert ch_CavL
+		gmax_ch_CavL = gCavL
+		
+		insert ch_KCaS
+		gmax_ch_KCaS = gKCaS
+		
+		insert ch_KvCaB
+		gmax_ch_KvCaB = gKvCaB
+
+		Ra = RaSoma
+	} 
+
+	soma {
+		insert ch_Nav	
+		gmax_ch_Nav = gNav
+		insert ch_Kdrfast
+		gmax_ch_Kdrfast = gKdr
+		
+		insert ch_leak
+		gmax_ch_leak = 1/RmSoma
+		cm=CmSoma
+	} 
+
+	forsec dendrite_list {
+		insert ch_Nav	
+		gmax_ch_Nav = gNav		
+		insert ch_Kdrfast
+		gmax_ch_Kdrfast = gKdr
+		insert ch_leak
+		gmax_ch_leak = 1/RmDend
+		cm=CmDend
+	}	
+}
+
+proc set_chanparams() {
+	forsec all {
+		ena = enaval
+		ek = ekval
+		eca = ecaval
+		e_ch_leak = eleakval
+		cao_iconc_Ca = ca_outside
+	}
+}
+
+
+obfunc connect2target() { localobj nc			//calls function connect to target
+	soma nc = new NetCon(&v(0.5), $o1)			//forms network connection between membrane potential of soma & $o1
+	nc.threshold = -10							//netcon threshold
+	if (numarg() == 2) ($o2 = nc)						
+	return nc
+	}
+
+endtemplate axoaxoniccell	

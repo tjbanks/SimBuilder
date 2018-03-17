@@ -1,0 +1,211 @@
+// Created by FF (2016)
+// 3-comp LA pyramidal cells template (with osci)
+
+
+/////====================/////
+///// Type C cell in LA  /////
+/////===================/////
+
+begintemplate Cell_C
+	public soma, dend, p_dend, AIS, axon, connect2target, type,drv
+	create soma, dend, p_dend, AIS[10], axon
+
+	public ncl, synlist
+	objref ncl, synlist,drv
+	strdef type
+	objref tlist, area_vec
+	public tlist, area_vec
+	external tstop
+
+	proc init() {	
+
+		tlist = new List()
+		area_vec = new Vector()	
+		ncl = new List()
+		synlist =new List()		
+		type = "Cell_C"	
+
+		gUnf_Xsoma = 2.5e-05
+		Rm = 80000 // decreased overall
+		SpineScale = 1.76371308 //2
+		SpineScale_leak = 1.763714578
+		Cm = 2.4 // 1.8 // 2 //1
+		RaAll= 150//200
+		RaSoma= 150 // 146.969697
+		RaDend = 150
+		RaAxIs = 150//100//200
+		Vpas = -72//-65//-70 // -67
+		
+		
+		  ////////////////////////////////////////
+		 //         Conductance values         //
+		////////////////////////////////////////
+		
+		gna = 0.015
+		gnap = 0.000555 // 0.000551 
+		gkdr = 0.002//0.002 
+		ghd = 1.5e-5//1.5e-5
+		gca = 5.5e-4 
+		gm = 0.00224 // 0.00222  
+		gsAHP = 0.0002//0.0012
+		gkap = 0.002 
+		gleak = 2.5e-5 
+		gleak_dend=1.57*3.0e-5
+		nash=10
+		Vrest = -70
+		celsius = 31.0 
+		
+		gna12_ais_max = 3200   // Nav1.2 
+		gna16_ais_max = 3200   // Nav1.6
+		gkv_axon = 1000
+
+		
+		
+		/////// topology ////////
+		connect dend(0), soma(0)
+
+        connect p_dend(0), soma(1)
+		
+		connect AIS[0](0), soma(1)
+		
+		for i = 0,8{ connect AIS[i+1](0) , AIS[i](1)}	
+		
+		connect axon(0), AIS[9] (1)
+		
+		
+		/////// geometry ////////
+		soma {L = 25 diam = 24.75 nseg = 1}		//{L = 20 diam = 20 nseg = 13}
+	    dend {diam= 3 L=270 nseg=8}     		// 3.5
+		p_dend {diam =5 L=555 nseg=7} 
+		for i=0,9 AIS[i] { L = 5 nseg = 10 diam = 1.22}
+		AIS[0]	{						
+			diam(	0	:	1	) = 	1.7	:	1.5
+			}											
+		AIS[1]	{						
+			diam(	0	:	1	) = 	1.5	:	1.22
+			}
+		axon {L = 100 nseg = 1 diam = 1}
+
+		access soma
+		//distance()
+		
+		p_dend {
+				insert cadyn gcabar_cadyn = gca eca = 120
+				insert leak el_leak = -72  glbar_leak = gleak_dend Ra=RaDend cm = Cm // 2.5
+				insert hd ghdbar_hd = ghd 
+				insert na3 sh_na3=nash ar_na3=1	gbar_na3 = gna
+				insert nap gbar_nap = 0  gbar_nap(1/(2*nseg)) = 0.8*gnap
+				insert kdr gbar_kdr = gkdr
+				insert capool taucas = 1000  fcas_capool = 0.05 
+				insert sAHP gsAHPbar_sAHP = 0
+				insert im gbar_im = 0 gbar_im(1/(2*nseg)) = 0.8*gm
+				insert kap gkabar_kap = 0
+				v=Vrest
+				ena = 45
+				ek = -80
+				if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-80}
+				if (ismembrane("hd") ) {ehd_hd=-45 } // change from -30 to -50							
+		}		
+		soma {	
+				insert cadyn gcabar_cadyn = gca  eca = 120
+				insert leak el_leak= -72  glbar_leak = 1.0*gleak   Ra=RaSoma cm = Cm // 2.5
+				insert hd ghdbar_hd = ghd 
+				insert na3 sh_na3=nash ar_na3=1	gbar_na3 = 3*gna
+				insert nap gbar_nap = gnap
+				insert kdr gbar_kdr = gkdr
+				insert capool taucas = 1000  fcas_capool = 0.05 //only in dend and p_dend
+				insert sAHP gsAHPbar_sAHP = gsAHP
+				insert im gbar_im = gm
+				insert kap gkabar_kap = gkap
+				v=Vrest
+				ena = 45
+				ek = -80
+				if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-80}
+				if (ismembrane("hd") ) {ehd_hd=-45 } // change from -30 to -50	
+		}	
+		
+		dend {  // need to add Spine Scale
+				insert cadyn gcabar_cadyn = gca  eca = 120
+				insert leak el_leak= -72  glbar_leak = gleak_dend  Ra=RaAll cm = Cm // 2.5
+				insert hd ghdbar_hd = ghd
+				insert na3 sh_na3=nash ar_na3=1	gbar_na3 = gna
+				insert nap gbar_nap = 0 gbar_nap(1/(2*nseg)) = 1.0*gnap
+				insert kdr gbar_kdr = gkdr
+				insert capool taucas = 1000  fcas_capool = 0.05 
+				insert sAHP gsAHPbar_sAHP = 0
+				insert im gbar_im = 0 gbar_im(1/(2*nseg)) = 1.0*gm
+				insert kap gkabar_kap = gkap
+				v=Vrest
+				ena = 45
+				ek = -80
+				if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-80}
+				if (ismembrane("hd") ) {ehd_hd=-45 } // change from -30 to -50	
+		}
+		
+		for i=0,9 AIS[i] {
+				insert pas
+				Ra = 150
+				cm = 0.5
+				g_pas = 1/30000
+				e_pas = -70
+				insert na12  gbar_na12=0
+				insert na16  gbar_na16=0
+				insert kv    gbar_kv = 0
+				}
+						
+		AIS[0]. gbar_na12= gna12_ais_max      *	0.96	*	1                  								
+		AIS[1]. gbar_na12= gna12_ais_max  		*	0.9	*	1                    
+		AIS[2]. gbar_na12= gna12_ais_max  		*	0.75	*	1                  
+		AIS[3]. gbar_na12= gna12_ais_max  		*	0.55	*	0.95               
+		AIS[4]. gbar_na12= gna12_ais_max  		*	0.366985879	*	0.880142857  
+		AIS[5]. gbar_na12= gna12_ais_max  		*	0.2	*	0.75                 
+		AIS[6]. gbar_na12= gna12_ais_max  		*	0.100330761	*	0.647857143  
+		AIS[7]. gbar_na12= gna12_ais_max  		*	0.011532125	*	0.520285714  
+		AIS[8]. gbar_na12= gna12_ais_max  		*	0	*	0.428571429            
+		AIS[9]. gbar_na12= gna12_ais_max  		*	0	*	0.342857143 
+		
+		AIS[0]. gbar_na16 = gna16_ais_max	*	0.04	*	1   
+		AIS[1]. gbar_na16 = gna16_ais_max	*	0.1	*	1   
+		AIS[2]. gbar_na16 = gna16_ais_max	*	0.25	*	1   
+		AIS[3]. gbar_na16 = gna16_ais_max	*	0.45	*	0.95   
+		AIS[4]. gbar_na16 = gna16_ais_max	*	0.633014121	*	0.880142857   
+		AIS[5]. gbar_na16 = gna16_ais_max	*	0.8	*	0.75   
+		AIS[6]. gbar_na16 = gna16_ais_max	*	0.899669239	*	0.647857143   
+		AIS[7]. gbar_na16 = gna16_ais_max	*	0.988467875	*	0.520285714   
+		AIS[8]. gbar_na16 = gna16_ais_max	*	1	*	0.428571429   
+		AIS[9]. gbar_na16 = gna16_ais_max	*	1	*	0.342857143  
+				
+		
+		AIS[0]. gbar_kv = gkv_axon	*	0.2 
+		AIS[1]. gbar_kv = gkv_axon	*	0.3 
+		AIS[2]. gbar_kv = gkv_axon	*	0.4 
+		AIS[3]. gbar_kv = gkv_axon	*	0.5 
+		AIS[4]. gbar_kv = gkv_axon	*	0.6 
+		AIS[5]. gbar_kv = gkv_axon	*	0.7 
+		AIS[6]. gbar_kv = gkv_axon	*	0.8 
+		AIS[7]. gbar_kv = gkv_axon	*	0.9
+		AIS[8]. gbar_kv = gkv_axon	*	1
+		AIS[9]. gbar_kv = gkv_axon	*	1
+
+		
+		axon{
+				insert pas
+				Ra = 150
+				cm = 1
+				g_pas = 1/30000
+				e_pas = -70
+				insert na12  gbar_na12=0
+				insert na16  gbar_na16=300
+				insert kv    gbar_kv= 1500
+		}
+	}
+	
+obfunc connect2target() { localobj nc
+    
+	axon nc = new NetCon(&v(0.5), $o1)
+	nc.threshold = 0
+	if (numarg() == 2) ($o2 = nc)
+	return nc
+	}
+
+endtemplate Cell_C
