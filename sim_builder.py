@@ -43,6 +43,10 @@ phasicdata_glob = os.path.join(dataset_folder, phasicdata_file_prefix + '*' + ph
 
 cells_glob = cells_folder+'/class_*.hoc'
 
+cellclasses = [fn for fn in glob.glob(cells_glob) 
+         if not os.path.basename(fn).startswith('class_cell_template')]
+
+
 class Autoresized_Notebook(ttk.Notebook):
     def __init__(self, master=None, **kw):
         ttk.Notebook.__init__(self, master, **kw)
@@ -655,7 +659,6 @@ def cells_page(root):
     
     
     def generate_files_available():
-        cellclasses = glob.glob(cells_glob)
         cellclasses_a.clear()
         search = 'cells\\\\class_(.+?).hoc'
         for c in cellclasses:
@@ -874,7 +877,6 @@ def connections_page(root):
     
     
     def generate_files_available():
-        cellclasses = glob.glob(cells_glob)
         cellclasses_a.clear()
         search = 'cells\\\\class_(.+?).hoc'
         for c in cellclasses:
@@ -1067,16 +1069,12 @@ def connections_page(root):
     newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
     
     
-
-
-
 def synapses_page(root):
     sections_list = ['dendrite_list','soma_list','apical_list','axon_list']
     class synapses_adapter(object):
         
-        def __init__(self, root, col):
+        def __init__(self, root):
             self.root = root
-            self.col = col
             self.pt = PandasTable(self.root, show_add_row_button=False)
             self.pt.pack()
             
@@ -1099,10 +1097,138 @@ def synapses_page(root):
             
         def has_changed(self):
             return self.pt.has_changed()
+        
+    class SynapseEntryBox:
+        def __init__(self, parent, text="value", lefttext="",righttext=""):
+    
+            top = self.top = tk.Toplevel(parent)
+            top.geometry('300x450')
+            tk.Label(top, text='Create new synapse:').grid(row=0,column=0,sticky="WE",columnspan=2)
+            
+            self.pre_value = tk.StringVar(top)
+            self.post_value = tk.StringVar(top)
+            self.syntype_value = tk.StringVar(top)
+            self.section_value = tk.StringVar(top)
+            self.cond1_value = tk.StringVar(top)
+            self.cond2_value = tk.StringVar(top)
+            self.tau1a_value = tk.StringVar(top)
+            self.tau2a_value = tk.StringVar(top)
+            self.ea_value = tk.StringVar(top)
+            self.tau1b_value = tk.StringVar(top)
+            self.tau2b_value = tk.StringVar(top)
+            self.eb_value = tk.StringVar(top)
+            self.confirm = False
+            
+            #Inputs
+            
+            l = tk.Label(top, text='Presynaptic Cell',width=20, background='light gray')
+            l.grid(row=1,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.pre = tk.Entry(top,textvariable=self.pre_value)
+            self.pre.grid(row=1,column=1)
+            
+            l = tk.Label(top, text='Postsynaptic Cell',width=20, background='light gray')
+            l.grid(row=2,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.post = tk.Entry(top,textvariable=self.post_value)
+            self.post.grid(row=2,column=1)
+            
+            l = tk.Label(top, text='Synapse Type',width=20, background='light gray')
+            l.grid(row=3,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.syntype = tk.Entry(top,textvariable=self.syntype_value)
+            self.syntype.grid(row=3,column=1)
+            
+            l = tk.Label(top, text='Section Type',width=20, background='light gray')
+            l.grid(row=4,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.section = tk.Entry(top,textvariable=self.section_value)
+            self.section.grid(row=4,column=1)
+            
+            l = tk.Label(top, text='Condition 1',width=20, background='light gray')
+            l.grid(row=5,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.cond1 = tk.Entry(top,textvariable=self.cond1_value)
+            self.cond1.grid(row=5,column=1)
+            
+            l = tk.Label(top, text='Condition 2',width=20, background='light gray')
+            l.grid(row=6,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.cond2 = tk.Entry(top,textvariable=self.cond2_value)
+            self.cond2.grid(row=6,column=1)
+            
+            l = tk.Label(top, text='Tau1a',width=20, background='light gray')
+            l.grid(row=7,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.tau1a = tk.Entry(top,textvariable=self.tau1a_value)
+            self.tau1a.grid(row=7,column=1)
+            
+            l = tk.Label(top, text='Tau2a',width=20, background='light gray')
+            l.grid(row=8,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.tau2a = tk.Entry(top,textvariable=self.tau2a_value)
+            self.tau2a.grid(row=8,column=1)
+            
+            l = tk.Label(top, text='ea',width=20, background='light gray')
+            l.grid(row=9,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.ea = tk.Entry(top,textvariable=self.ea_value)
+            self.ea.grid(row=9,column=1)
+            
+            l = tk.Label(top, text='Tau1b',width=20, background='light gray')
+            l.grid(row=10,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.tau1b = tk.Entry(top,textvariable=self.tau1b_value)
+            self.tau1b.grid(row=10,column=1)
+            
+            l = tk.Label(top, text='Tau2b',width=20, background='light gray')
+            l.grid(row=11,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.tau2b = tk.Entry(top,textvariable=self.tau2b_value)
+            self.tau2b.grid(row=11,column=1)
+            
+            l = tk.Label(top, text='eb',width=20, background='light gray')
+            l.grid(row=12,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.eb = tk.Entry(top,textvariable=self.eb_value)
+            self.eb.grid(row=12,column=1)
+            
+            #Return
+            
+            button_frame = tk.Frame(top)
+            button_frame.grid(row=20,column=0,columnspan=2)
+            
+            b = tk.Button(button_frame, text="Ok", command=self.ok)
+            b.grid(pady=5, padx=5, column=0, row=0, sticky="WE")
+            
+            b = tk.Button(button_frame, text="Cancel", command=self.cancel)
+            b.grid(pady=5, padx=5, column=1, row=0, sticky="WE")
+            
+        def verify_good(self):
+            return True
+    
+        def get_values(self):
+            newsyn = [self.pre_value.get(), self.post_value.get(), self.syntype_value.get(),
+                  self.section_value.get(), self.cond1_value.get(), self.cond2_value.get(),
+                  self.tau1a_value.get(), self.tau2a_value.get(), self.ea_value.get(),
+                  self.tau1b_value.get(), self.tau2b_value.get(), self.eb_value.get()]
+            return newsyn
+            
+        def ok(self):
+            self.confirm = True
+            self.top.destroy()
+        def cancel(self):
+            self.top.destroy()
       
     
-    def raise_frame(frame):
-        frame.tkraise()
+    def add_synapse(*args):
+        d = SynapseEntryBox(root)
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        
+        print(d.get_values())
     
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Synapse Data")
@@ -1129,14 +1255,13 @@ def synapses_page(root):
     d = defaultdict(list)
     d[1].append(cellclasses_a)
     
-    #tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0)
-    synapses_page_obj = synapses_adapter(page1,2)
+    tk.Button(table_frame_controls, text='Add Synapse Type', command=add_synapse).grid(column=0,row=0, padx=5, pady=5)
+    synapses_page_obj = synapses_adapter(page1)
     
     ######################################
     
     
     def generate_files_available():
-        cellclasses = glob.glob(cells_glob)
         cellclasses_a.clear()
         search = 'cells\\\\class_(.+?).hoc'
         for c in cellclasses:
@@ -1201,24 +1326,23 @@ def synapses_page(root):
         if d.confirm==False:
             return
         
-        #newfilename = dataset_folder+'\\'+cellnums_file_prefix+ d.value.get() + cellnums_file_postfix
-        #f = open(newfilename,"w+")
-        #f.close
-        ##pt.new()
+        newfilename = dataset_folder+'\\'+syndata_file_prefix+ d.value.get() + syndata_file_postfix
+        f = open(newfilename,"w+")
+        f.close
+        #pt.new()
         #generate_files_available()
         ##https://stackoverflow.com/questions/17580218/changing-the-options-of-a-optionmenu-when-clicking-a-button
     
-        #m = fileMenu.children['menu']
-        #m.delete(0,tk.END)
-        #newvalues = options
-        #newvalues.append(newfilename)
-        #for val in newvalues:
-        #    m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
-        #filename.set(newfilename)
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        newvalues.append(newfilename)
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+        filename.set(newfilename)
         
         #pt.new()
         display_app_status('Synapse Data file \"'+filename.get()+'\" created')
-        display_app_status('Not implemented')
         return
 
     def new_clone_current():
@@ -1311,7 +1435,6 @@ def phasic_page(root):
     pt = PandasTable(table_frame_internal, show_add_row_button=False)
     
     def generate_files_available():
-        cellclasses = glob.glob(cells_glob)
         cellclasses_a.clear()
         search = 'cells\\\\class_(.+?).hoc'
         for c in cellclasses:
