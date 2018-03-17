@@ -1,3 +1,3 @@
 2
-hco1 hco2 MyExp2Sid soma_list distance(x)>-1 distance(x)<1000 2.0 6.3 -80   
-hco2 hco1 MyExp2Sid soma_list distance(x)>-1 distance(x)<1000 2.0 6.3 -80   
+hco1 hco2 MyExp2Sid soma_list distance(x)>-1 distance(x)<1000 10 20 -80   
+hco2 hco1 MyExp2Sid soma_list distance(x)>-1 distance(x)<1000 10 20 -80   
