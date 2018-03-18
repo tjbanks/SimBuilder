@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 import os
+import subprocess
 import re
 import glob
 from collections import defaultdict
@@ -355,7 +356,8 @@ class PandasTable(tk.Frame):
                 entity.config(width=20,relief=tk.GROOVE,background='light gray')
                 entity.grid(row=insert_i, column=j+3,sticky='news')
             elif self.options_dict is not None and self.options_dict.get(j,False):
-                entity = tk.OptionMenu(self.table_frame_internal, value, *self.options_dict.get(j)[0])
+                temp = self.options_dict.get(j)[0]
+                entity = tk.OptionMenu(self.table_frame_internal, value, *temp)
                 entity.config(width=20)
                 entity.grid(column=j+3,row=insert_i,sticky='NEWS')
             else:
@@ -1797,6 +1799,10 @@ def results_page(root):
     #######Build Section
     ##############################
     
+    def run_command(command):
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return iter(p.stdout.readline, b'')
+    
     def generate_batch():
         #Create popup with questions for batch, with defaults loaded from json file
         display_app_status('Not implemented')
@@ -1806,6 +1812,9 @@ def results_page(root):
         generate_batch()
         
     def local_run():
+        command = 'echo yes'.split()
+        for line in run_command(command):
+            print(line)
         display_app_status('Not implemented')
         return
     
@@ -1899,7 +1908,7 @@ def results_page(root):
     
     
     
-    r = tk.Label(results_frame,text='Current results loaded: ')
+    r = tk.Label(results_frame,text='Results loaded: ')
     r.grid(column=0, row =0)
     
     fileMenu = tk.OptionMenu(results_frame, foldername, *result_options)
