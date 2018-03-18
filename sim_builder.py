@@ -802,7 +802,11 @@ def cells_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
+    
+    numdat = get_public_param("NumData")
+    numdat = os.path.join(dataset_folder, cellnums_file_prefix + numdat + cellnums_file_postfix)
+    filename.set(numdat)
+    #filename.set(options[0])
         
     load()#initial load
     
@@ -1099,7 +1103,11 @@ def connections_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
+    
+    conndat = get_public_param("ConnData")
+    conndat = os.path.join(dataset_folder, conndata_file_prefix + conndat + conndata_file_postfix)
+    filename.set(conndat)
+    #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Current Cells File", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=1)
@@ -1359,7 +1367,7 @@ def synapses_page(root):
     bottom_option_frame.grid(column=0,row=2,sticky='we')
    
     
-    page1 = tk.Frame(table_frame_internal)   
+    page1 = tk.Frame(table_frame_internal) 
     
     ######################################
     
@@ -1502,7 +1510,12 @@ def synapses_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
+    
+    syndat = get_public_param("SynData")
+    syndat = os.path.join(dataset_folder, syndata_file_prefix + syndat + syndata_file_postfix)
+    filename.set(syndat)
+    
+    #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
@@ -1769,7 +1782,11 @@ def phasic_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
+    
+    phasicdat = get_public_param("PhasicData")
+    phasicdat = os.path.join(dataset_folder, phasicdata_file_prefix + phasicdat + phasicdata_file_postfix)
+    filename.set(phasicdat)
+    #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new_generate, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
