@@ -1812,9 +1812,11 @@ def results_page(root):
         generate_batch()
         
     def local_run():
-        command = 'echo yes'.split()
+        command = 'nrniv main.hoc'.split()
         for line in run_command(command):
-            print(line)
+            console.configure(state='normal')
+            console.insert('end', '> ' + str(line))
+            console.configure(state='disabled')
         display_app_status('Not implemented')
         return
     
