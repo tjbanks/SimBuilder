@@ -7,7 +7,12 @@ Created on Sat Feb 24 23:26:54 2018
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
 import os
+import subprocess
 import re
 import glob
 from collections import defaultdict
@@ -26,6 +31,7 @@ root = tk.Tk()
 
 dataset_folder = 'datasets'
 cells_folder = 'cells'
+results_folder = 'results'
 
 cellnums_file_prefix = 'cellnumbers_'
 cellnums_file_postfix = '.dat'
@@ -35,11 +41,14 @@ syndata_file_prefix = 'syndata_'
 syndata_file_postfix = '.dat'
 phasicdata_file_prefix = 'phasic_'
 phasicdata_file_postfix = '.dat'
+trace_file_prefix = 'trace_'
+trace_file_postfix = '.dat'
 
 cellnums_glob = os.path.join(dataset_folder,cellnums_file_prefix + '*' + cellnums_file_postfix)
 connections_glob = os.path.join(dataset_folder, conndata_file_prefix +'*'+ conndata_file_postfix)
 syndata_glob = os.path.join(dataset_folder, syndata_file_prefix + '*' + syndata_file_postfix)
 phasicdata_glob = os.path.join(dataset_folder, phasicdata_file_prefix + '*' + phasicdata_file_postfix)
+results_glob = os.path.join(results_folder,'*','')
 
 cells_glob = cells_folder+'/class_*.hoc'
 
@@ -123,7 +132,11 @@ class DialogEntryBox:
         self.confirm = False
         
         tk.Label(top, text=lefttext,width=20, anchor="e").grid(row=1,column=0)
-        self.e = tk.Entry(top,textvariable=self.value)
+        
+        vcmd = (top.register(self.validate),
+                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+        
+        self.e = tk.Entry(top,textvariable=self.value, validate = 'key', validatecommand = vcmd)
         self.e.grid(row=1,column=1,columnspan=2)
         tk.Label(top, text=righttext).grid(row=1,column=3)
         
@@ -135,6 +148,22 @@ class DialogEntryBox:
         
         b = tk.Button(button_frame, text="Cancel", command=self.cancel)
         b.grid(pady=5, padx=5, column=1, row=2, sticky="WE")
+        
+        tk.Label(top, text="Numbers only currently",width=20, anchor="w",fg='blue').grid(row=3,column=1,columnspan=2)
+        
+    def validate(self, action, index, value_if_allowed,
+                       prior_value, text, validation_type, trigger_type, widget_name):
+
+        if text in '0123456789-':
+            try:
+                if value_if_allowed is '':
+                    return True
+                float(value_if_allowed)
+                return True
+            except ValueError:
+                return False
+        else:
+            return False
 
     def ok(self):
         self.confirm = True
@@ -327,7 +356,8 @@ class PandasTable(tk.Frame):
                 entity.config(width=20,relief=tk.GROOVE,background='light gray')
                 entity.grid(row=insert_i, column=j+3,sticky='news')
             elif self.options_dict is not None and self.options_dict.get(j,False):
-                entity = tk.OptionMenu(self.table_frame_internal, value, *self.options_dict.get(j)[0])
+                temp = self.options_dict.get(j)[0]
+                entity = tk.OptionMenu(self.table_frame_internal, value, *temp)
                 entity.config(width=20)
                 entity.grid(column=j+3,row=insert_i,sticky='NEWS')
             else:
@@ -642,7 +672,7 @@ def parameters_page(root):
 
 def cells_page(root):
     
-    column_names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"]
+    column_names = ["Friendly Cell Name", "Cell File Name", "Number of Cells", "Layer Index","Artificial:1 Real:0"]
     
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Cell Numbers")
@@ -754,8 +784,14 @@ def cells_page(root):
         return
     
     def set_numdata_param():
-        set_public_param("NumData", filename.get())
-        display_app_status('NumData parameter set in current parameters file')
+        fn = filename.get()
+        search = cellnums_file_prefix+'(.+?)'+cellnums_file_postfix
+        m = re.search(search,fn)
+        if m:
+            fn = m.group(1)
+
+        set_public_param("NumData", fn)
+        display_app_status('NumData parameter set to \"'+ filename.get() +'\" in current parameters file')
         return
 
     generate_files_available()
@@ -766,7 +802,11 @@ def cells_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
+    
+    numdat = get_public_param("NumData")
+    numdat = os.path.join(dataset_folder, cellnums_file_prefix + numdat + cellnums_file_postfix)
+    filename.set(numdat)
+    #filename.set(options[0])
         
     load()#initial load
     
@@ -790,9 +830,10 @@ def connections_page(root):
     
     class connections_adapter(object):
         
-        def __init__(self, root, col):
+        def __init__(self, root, col, text=''):
             self.root = root
             self.col = col
+            tk.Label(root, text=text ,fg='blue').pack(anchor='w')
             self.pt = PandasTable(self.root, show_add_row_button=False, allow_sorting=False)
             self.pt.pack()
             
@@ -864,13 +905,16 @@ def connections_page(root):
             
     
     tk.Button(table_frame_controls, text='Synaptic Weights', command=lambda:raise_frame(page1)).grid(column=0,row=0,padx=4,pady=4)
-    synaptic_weight_page_obj = connections_adapter(page1,2)
+    text = 'Synaptic weight refers to the strength of a connection between two nodes, corresponding in biology to the influence the firing neuron on another neuron.'
+    synaptic_weight_page_obj = connections_adapter(page1,2,text=text)
     
     tk.Button(table_frame_controls, text='Convergence', command=lambda:raise_frame(page2)).grid(column=1,row=0,padx=4,pady=4)
-    convergence_page_obj = connections_adapter(page2,3)#convergence_page(page2)
+    text = 'Convergence defines the *total* number of connections to be randomly distributed between the presynaptic type and the postsynaptic type neuron.'
+    convergence_page_obj = connections_adapter(page2,3,text)#convergence_page(page2)
     
     tk.Button(table_frame_controls, text='Synapses', command=lambda:raise_frame(page3)).grid(column=2,row=0,padx=4,pady=4)
-    synapses_page_obj = connections_adapter(page3,4)#synapses_page(page3)
+    text = 'Synapses per connection to be made.'
+    synapses_page_obj = connections_adapter(page3,4,text)#synapses_page(page3)
     
     
     ######################################
@@ -1035,8 +1079,14 @@ def connections_page(root):
         
     
     def set_conndata_param():
-        set_public_param("ConnData", filename.get())
-        display_app_status('ConnData parameter set in current parameters file')
+        fn = filename.get()
+        search = conndata_file_prefix+'(.+?)'+conndata_file_postfix
+        m = re.search(search,fn)
+        if m:
+            fn = m.group(1)
+        
+        set_public_param("ConnData", fn)
+        display_app_status('ConnData parameter set to \"'+ filename.get() +'\" in current parameters file')
         return
 
     def reload_files_and_set(newfilename):
@@ -1053,7 +1103,11 @@ def connections_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
+    
+    conndat = get_public_param("ConnData")
+    conndat = os.path.join(dataset_folder, conndata_file_prefix + conndat + conndata_file_postfix)
+    filename.set(conndat)
+    #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Current Cells File", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=1)
@@ -1071,6 +1125,13 @@ def connections_page(root):
     
 def synapses_page(root):
     sections_list = ['dendrite_list','soma_list','apical_list','axon_list']
+    synapse_type_list = ['MyExp2Sid','ExpGABAab']
+    condition_list = ['distance(x)','y3d(x)']
+    synapse_column_names = ["Postsynaptic Cell", "Presynaptic Cells",\
+                                "Synapse Type", "Postsynaptic Section Target",\
+                                "Condition 1", "Condition 2",\
+                                "Tau1a", "Tau2a", "ea",\
+                                "Tau1b", "Tau2b", "eb"]
     class synapses_adapter(object):
         
         def __init__(self, root):
@@ -1095,6 +1156,15 @@ def synapses_page(root):
                                   options_dict=d)
             self.pt.pack()
             
+        def add_row(self, row):
+            row = np.array(row).reshape(-1,len(row))
+            r = pd.DataFrame(row,columns=synapse_column_names)
+            
+            for i, row in r.iterrows():
+                self.pt.add_row(row)
+                
+            return
+        
         def has_changed(self):
             return self.pt.has_changed()
         
@@ -1102,15 +1172,26 @@ def synapses_page(root):
         def __init__(self, parent, text="value", lefttext="",righttext=""):
     
             top = self.top = tk.Toplevel(parent)
-            top.geometry('300x450')
-            tk.Label(top, text='Create new synapse:').grid(row=0,column=0,sticky="WE",columnspan=2)
+            top.geometry('475x450')
+            tk.Label(top, text='Create new synapse:\nValues from currently loaded cells file.').grid(row=0,column=0,sticky="WE",columnspan=2)
+            
+            gaba_extras = tk.Frame(top)
+            
+            def showhide_gaba_extras(*args):
+                if self.syntype_value.get() == synapse_type_list[1]:
+                    gaba_extras.grid(row=10,column=0,columnspan=2)
+                else:
+                    gaba_extras.grid_forget()
+                return
             
             self.pre_value = tk.StringVar(top)
             self.post_value = tk.StringVar(top)
             self.syntype_value = tk.StringVar(top)
             self.section_value = tk.StringVar(top)
             self.cond1_value = tk.StringVar(top)
+            self.cond1_text_value = tk.StringVar(top)
             self.cond2_value = tk.StringVar(top)
+            self.cond2_text_value = tk.StringVar(top)
             self.tau1a_value = tk.StringVar(top)
             self.tau2a_value = tk.StringVar(top)
             self.ea_value = tk.StringVar(top)
@@ -1120,78 +1201,114 @@ def synapses_page(root):
             self.confirm = False
             
             #Inputs
+            loaded_cellnums = get_public_param("loaded_cellnums")
             
-            l = tk.Label(top, text='Presynaptic Cell',width=20, background='light gray')
+            column_names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"]
+            cellnums_pd = pd.read_csv(loaded_cellnums ,delimiter=' ',\
+                           skiprows=1,header=None,\
+                           names = column_names)
+            cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
+            pre_options = cellnums_pd[cellnums_pd.columns[0]].values.tolist()
+            post_options = cellnums_pd.loc[cellnums_pd[column_names[4]] == 0]
+            post_options = post_options[post_options.columns[0]].values.tolist()
+        
+            
+            l = tk.Label(top, text='Presynaptic Cell',width=25, background='light gray')
             l.grid(row=1,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.pre = tk.Entry(top,textvariable=self.pre_value)
+            #self.pre = tk.Entry(top,textvariable=self.pre_value)
+            self.pre = tk.OptionMenu(top, self.pre_value, *pre_options)
             self.pre.grid(row=1,column=1)
             
-            l = tk.Label(top, text='Postsynaptic Cell',width=20, background='light gray')
+            l = tk.Label(top, text='Postsynaptic Cell',width=25, background='light gray')
             l.grid(row=2,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.post = tk.Entry(top,textvariable=self.post_value)
+            #self.post = tk.Entry(top,textvariable=self.post_value)
+            self.post = tk.OptionMenu(top, self.post_value, *post_options)
             self.post.grid(row=2,column=1)
             
-            l = tk.Label(top, text='Synapse Type',width=20, background='light gray')
+            l = tk.Label(top, text='Synapse Type',width=25, background='light gray')
             l.grid(row=3,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.syntype = tk.Entry(top,textvariable=self.syntype_value)
+            #self.syntype = tk.Entry(top,textvariable=self.syntype_value)
+            self.syntype = tk.OptionMenu(top, self.syntype_value, *synapse_type_list)
+            self.syntype_value.trace("w",showhide_gaba_extras)
+            self.syntype_value.set(synapse_type_list[0])
             self.syntype.grid(row=3,column=1)
             
-            l = tk.Label(top, text='Section Type',width=20, background='light gray')
+            l = tk.Label(top, text='Postsynaptic Section Target',width=25, background='light gray')
             l.grid(row=4,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.section = tk.Entry(top,textvariable=self.section_value)
+            #self.section = tk.Entry(top,textvariable=self.section_value)
+            self.section = tk.OptionMenu(top, self.section_value, *sections_list)
             self.section.grid(row=4,column=1)
             
-            l = tk.Label(top, text='Condition 1',width=20, background='light gray')
+            l = tk.Label(top, text='Condition 1',width=25, background='light gray')
             l.grid(row=5,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.cond1 = tk.Entry(top,textvariable=self.cond1_value)
+            #self.cond1 = tk.Entry(top,textvariable=self.cond1_value)
+            self.cond1 = tk.OptionMenu(top, self.cond1_value, *condition_list)
+            self.cond1_value.set(condition_list[0])
             self.cond1.grid(row=5,column=1)
+            tk.Label(top, text=' > ').grid(row=5, column=2)
+            self.cond1_text = tk.Entry(top, textvariable=self.cond1_text_value)
+            self.cond1_text_value.set('-1')
+            self.cond1_text.grid(row=5, column=3)
             
-            l = tk.Label(top, text='Condition 2',width=20, background='light gray')
+            
+            l = tk.Label(top, text='Condition 2',width=25, background='light gray')
             l.grid(row=6,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.cond2 = tk.Entry(top,textvariable=self.cond2_value)
+            #self.cond2 = tk.Entry(top,textvariable=self.cond2_value)
+            self.cond2 = tk.OptionMenu(top, self.cond2_value, *condition_list)
+            self.cond2_value.set(condition_list[0])
             self.cond2.grid(row=6,column=1)
+            tk.Label(top, text=' < ').grid(row=6, column=2)
+            self.cond2_text = tk.Entry(top, textvariable=self.cond2_text_value)
+            self.cond2_text_value.set('10000')
+            self.cond2_text.grid(row=6, column=3)
             
-            l = tk.Label(top, text='Tau1a',width=20, background='light gray')
+            l = tk.Label(top, text='Tau1a',width=25, background='light gray')
             l.grid(row=7,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
             self.tau1a = tk.Entry(top,textvariable=self.tau1a_value)
+            self.tau1a_value.set('2.0')
             self.tau1a.grid(row=7,column=1)
             
-            l = tk.Label(top, text='Tau2a',width=20, background='light gray')
+            l = tk.Label(top, text='Tau2a',width=25, background='light gray')
             l.grid(row=8,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
             self.tau2a = tk.Entry(top,textvariable=self.tau2a_value)
+            self.tau2a_value.set('6.3')
             self.tau2a.grid(row=8,column=1)
             
-            l = tk.Label(top, text='ea',width=20, background='light gray')
+            l = tk.Label(top, text='ea',width=25, background='light gray')
             l.grid(row=9,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
             self.ea = tk.Entry(top,textvariable=self.ea_value)
+            self.ea_value.set('0.0')
             self.ea.grid(row=9,column=1)
             
-            l = tk.Label(top, text='Tau1b',width=20, background='light gray')
+            
+            
+            l = tk.Label(gaba_extras, text='Tau1b',width=25, background='light gray')
             l.grid(row=10,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.tau1b = tk.Entry(top,textvariable=self.tau1b_value)
+            self.tau1b = tk.Entry(gaba_extras,textvariable=self.tau1b_value)
             self.tau1b.grid(row=10,column=1)
             
-            l = tk.Label(top, text='Tau2b',width=20, background='light gray')
+            l = tk.Label(gaba_extras, text='Tau2b',width=25, background='light gray')
             l.grid(row=11,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.tau2b = tk.Entry(top,textvariable=self.tau2b_value)
+            self.tau2b = tk.Entry(gaba_extras,textvariable=self.tau2b_value)
             self.tau2b.grid(row=11,column=1)
             
-            l = tk.Label(top, text='eb',width=20, background='light gray')
+            l = tk.Label(gaba_extras, text='eb',width=25, background='light gray')
             l.grid(row=12,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.eb = tk.Entry(top,textvariable=self.eb_value)
+            self.eb = tk.Entry(gaba_extras,textvariable=self.eb_value)
             self.eb.grid(row=12,column=1)
+            
             
             #Return
             
@@ -1208,8 +1325,13 @@ def synapses_page(root):
             return True
     
         def get_values(self):
+            if self.syntype_value.get() == synapse_type_list[0]: #set to nan if it's not a gabaab
+                self.tau1b_value.set('nan')
+                self.tau2b_value.set('nan')
+                self.eb_value.set('nan')
+                
             newsyn = [self.pre_value.get(), self.post_value.get(), self.syntype_value.get(),
-                  self.section_value.get(), self.cond1_value.get(), self.cond2_value.get(),
+                  self.section_value.get(), self.cond1_value.get()+'>'+self.cond1_text_value.get(), self.cond2_value.get()+'<'+self.cond2_text_value.get(),
                   self.tau1a_value.get(), self.tau2a_value.get(), self.ea_value.get(),
                   self.tau1b_value.get(), self.tau2b_value.get(), self.eb_value.get()]
             return newsyn
@@ -1227,8 +1349,8 @@ def synapses_page(root):
         
         if d.confirm==False:
             return
-        
-        print(d.get_values())
+        if d.verify_good():
+            synapses_page_obj.add_row(d.get_values())
     
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Synapse Data")
@@ -1245,7 +1367,7 @@ def synapses_page(root):
     bottom_option_frame.grid(column=0,row=2,sticky='we')
    
     
-    page1 = tk.Frame(table_frame_internal)   
+    page1 = tk.Frame(table_frame_internal) 
     
     ######################################
     
@@ -1273,11 +1395,7 @@ def synapses_page(root):
         #print ("loading: " + filename.get())
         df = pd.read_csv(filename.get() ,delim_whitespace=True,\
                        skiprows=1,header=None,\
-                       names = ["Postsynaptic Cell", "Presynaptic Cells",\
-                                "Synapse Type", "Section",\
-                                "Minimum Distance", "Maximum Distance",\
-                                "Tau1a", "Tau2a", "ea",\
-                                "Tau1b", "Tau2b", "eb"])
+                       names = synapse_column_names)
         cols = list(df.columns.values) #switch pre and post synaptic 
         cols.insert(0, cols.pop(1))
         df = df[cols]
@@ -1376,8 +1494,14 @@ def synapses_page(root):
         
 
     def set_syndata_param():
-        set_public_param("SynData", filename.get())
-        display_app_status('SynData parameter set in current parameters file')
+        fn = filename.get()
+        search = syndata_file_prefix+'(.+?)'+syndata_file_postfix
+        m = re.search(search,fn)
+        if m:
+            fn = m.group(1)
+        
+        set_public_param("SynData", fn)
+        display_app_status('SynData parameter set to \"'+ filename.get() +'\" in current parameters file')
         return
     
     
@@ -1386,9 +1510,14 @@ def synapses_page(root):
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Connection Weights", command=new, width=30)
+    syndat = get_public_param("SynData")
+    syndat = os.path.join(dataset_folder, syndata_file_prefix + syndat + syndata_file_postfix)
+    filename.set(syndat)
+    
+    #filename.set(options[0])
+    
+    newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
     useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=set_syndata_param, width=30)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
@@ -1406,6 +1535,8 @@ def synapses_page(root):
 
 def phasic_page(root):
            
+    phase_column_list = ["Cell","Max Frequency (Hz)","Noise","Depth","Phase"]
+    
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Phasic Stimulation")
     table_frame_internal = tk.Frame(table_frame)
@@ -1434,6 +1565,95 @@ def phasic_page(root):
     ######################################
     pt = PandasTable(table_frame_internal, show_add_row_button=False)
     
+    
+    class PhasicEntryBox:
+        def __init__(self, parent, text="value", lefttext="",righttext=""):
+    
+            top = self.top = tk.Toplevel(parent)
+            top.geometry('325x250')
+            top.resizable(0,0)
+            tk.Label(top, text='Enter new phasic stimulation information:\nCell types from currently loaded \ncells file artificial cells.').grid(row=0,column=0,sticky="WE",columnspan=2)
+            
+            
+            self.cell_value = tk.StringVar(top)
+            self.frequency_value = tk.StringVar(top)
+            self.noise_value = tk.StringVar(top)
+            self.depth_value = tk.StringVar(top)
+            self.phase_value = tk.StringVar(top)
+            self.confirm = False
+            
+            #Inputs
+            loaded_cellnums = get_public_param("loaded_cellnums")
+            
+            column_names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"]
+            cellnums_pd = pd.read_csv(loaded_cellnums ,delimiter=' ',\
+                           skiprows=1,header=None,\
+                           names = column_names)
+            cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
+            post_options = cellnums_pd.loc[cellnums_pd[column_names[4]] != -1]
+            post_options = post_options[post_options.columns[0]].values.tolist()
+            
+            l = tk.Label(top, text='Cell',width=25, background='light gray')
+            l.grid(row=2,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            #self.post = tk.Entry(top,textvariable=self.post_value)
+            self.cell = tk.OptionMenu(top, self.cell_value, *post_options)
+            self.cell.grid(row=2,column=1)
+
+            
+            l = tk.Label(top, text='Max Frequency (Hz)',width=25, background='light gray')
+            l.grid(row=3,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.frequency = tk.Entry(top,textvariable=self.frequency_value)
+            self.frequency_value.set('1')
+            self.frequency.grid(row=3,column=1)
+            
+            l = tk.Label(top, text='Noise',width=25, background='light gray')
+            l.grid(row=4,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.noise = tk.Entry(top,textvariable=self.noise_value)
+            self.noise_value.set('0.0')
+            self.noise.grid(row=4,column=1)
+            
+            l = tk.Label(top, text='Depth',width=25, background='light gray')
+            l.grid(row=5,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.depth = tk.Entry(top,textvariable=self.depth_value)
+            self.depth_value.set('0.0')
+            self.depth.grid(row=5,column=1)
+            
+            l = tk.Label(top, text='Phase',width=25, background='light gray')
+            l.grid(row=6,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.phase = tk.Entry(top,textvariable=self.phase_value)
+            self.phase_value.set('0')
+            self.phase.grid(row=6,column=1)
+            
+            #Return
+            
+            button_frame = tk.Frame(top)
+            button_frame.grid(row=20,column=0,columnspan=2)
+            
+            b = tk.Button(button_frame, text="Ok", command=self.ok)
+            b.grid(pady=5, padx=5, column=0, row=0, sticky="WE")
+            
+            b = tk.Button(button_frame, text="Cancel", command=self.cancel)
+            b.grid(pady=5, padx=5, column=1, row=0, sticky="WE")
+            
+        def verify_good(self):
+            return True
+    
+        def get_values(self):
+            newphase = [self.cell_value.get(), self.frequency_value.get(), self.noise_value.get(),
+                  self.depth_value.get(), self.phase_value.get()]
+            return newphase
+            
+        def ok(self):
+            self.confirm = True
+            self.top.destroy()
+        def cancel(self):
+            self.top.destroy()
+    
     def generate_files_available():
         cellclasses_a.clear()
         search = 'cells\\\\class_(.+?).hoc'
@@ -1446,11 +1666,10 @@ def phasic_page(root):
         
         df = pd.read_csv(filename.get() ,delim_whitespace=True,\
                        skiprows=1,header=None,\
-                       names = ["Cell","Max Frequency (Hz)","Noise",\
-                                "Depth","Phase"])
+                       names = phase_column_list)
         
         pt.pack()
-        pt.set_dataframe(df, show_delete_row=False,\
+        pt.set_dataframe(df, show_delete_row=True,\
                                   show_header=True, show_numbering=True, \
                                   first_column_is_id=False, immutable_values=["nan"])
         
@@ -1483,20 +1702,20 @@ def phasic_page(root):
         if d.confirm==False:
             return
         
-        #newfilename = dataset_folder+'\\'+cellnums_file_prefix+ d.value.get() + cellnums_file_postfix
-        #f = open(newfilename,"w+")
-        #f.close
-        ##pt.new()
+        newfilename = dataset_folder+'\\'+phasicdata_file_prefix+ d.value.get() + phasicdata_file_postfix
+        f = open(newfilename,"w+")
+        f.close
+        #pt.new()
         #generate_files_available()
-        ##https://stackoverflow.com/questions/17580218/changing-the-options-of-a-optionmenu-when-clicking-a-button
+        #https://stackoverflow.com/questions/17580218/changing-the-options-of-a-optionmenu-when-clicking-a-button
     
-        #m = fileMenu.children['menu']
-        #m.delete(0,tk.END)
-        #newvalues = options
-        #newvalues.append(newfilename)
-        #for val in newvalues:
-        #    m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
-        #filename.set(newfilename)
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        newvalues.append(newfilename)
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
+        filename.set(newfilename)
         
         #pt.new()
         display_app_status('Phasic Data file \"'+ newfilename +'\" created')
@@ -1532,18 +1751,44 @@ def phasic_page(root):
         return
 
     def set_phasicdata_param():
-        set_public_param("PhasicData", filename.get())
-        display_app_status('PhasicData parameter set in current parameters file')
+        fn = filename.get()
+        search = phasicdata_file_prefix+'(.+?)'+phasicdata_file_postfix
+        m = re.search(search,fn)
+        if m:
+            fn = m.group(1)
+        set_public_param("PhasicData", fn)
+        display_app_status('PhasicData parameter set to \"'+ filename.get() +'\" in current parameters file')
         return
 
     #generate_files_available()
     
+    def add_phase(*args):
+        d = PhasicEntryBox(root)
+        root.wait_window(d.top)
+        
+        if d.confirm==False:
+            return
+        if d.verify_good():
+            row = d.get_values()
+            row = np.array(row).reshape(-1,len(row))
+            r = pd.DataFrame(row,columns=phase_column_list)
+            
+            for i, row in r.iterrows():
+                pt.add_row(row)
+    
+    tk.Button(table_frame_controls, text='Add Phasic Stimulus', command=add_phase).grid(column=0,row=0, padx=5, pady=5)
+    
+    
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
-    filename.set(options[0])
     
-    newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Connection Weights", command=new_generate, width=30)
+    phasicdat = get_public_param("PhasicData")
+    phasicdat = os.path.join(dataset_folder, phasicdata_file_prefix + phasicdat + phasicdata_file_postfix)
+    filename.set(phasicdat)
+    #filename.set(options[0])
+    
+    newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new_generate, width=30)
     newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
     useButton = tk.Button(top_option_frame, text="Set as PhasicData parameter", command=set_phasicdata_param, width=30)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
@@ -1561,7 +1806,7 @@ def phasic_page(root):
 def results_page(root):
         
     buildrun_frame = tk.LabelFrame(root, text="Run Model")
-    results_frame = tk.LabelFrame(root, text="Results")
+    results_frame = tk.LabelFrame(root, text="General Results")
     console_frame = tk.LabelFrame(root, text="Console Output")
         
     buildrun_frame.grid(column=0,row=0,sticky='NEWS',padx=10,pady=5)
@@ -1570,6 +1815,10 @@ def results_page(root):
     
     #######Build Section
     ##############################
+    
+    def run_command(command):
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return iter(p.stdout.readline, b'')
     
     def generate_batch():
         #Create popup with questions for batch, with defaults loaded from json file
@@ -1580,6 +1829,11 @@ def results_page(root):
         generate_batch()
         
     def local_run():
+        command = 'nrniv main.hoc'.split()
+        for line in run_command(command):
+            console.configure(state='normal')
+            console.insert('end', '> ' + str(line))
+            console.configure(state='disabled')
         display_app_status('Not implemented')
         return
     
@@ -1598,16 +1852,95 @@ def results_page(root):
     ######Results section
     ##############################
     
+    class ShowGraphBox:
+        def __init__(self, parent, df, plottype='line', text="Graph Area"):
+    
+            top = self.top = tk.Toplevel(parent)
+            top.geometry('510x430')
+            top.resizable(0,0)
+            #tk.Label(top, text='Create new synapse:').grid(row=0,column=0,sticky="WE",columnspan=2)
+            lf = ttk.Labelframe(top, text=text)
+            lf.grid(row=4, column=0, sticky='nwes', padx=3, pady=3)
+            
+            fig = Figure(figsize=(5,4), dpi=100)
+            ax = fig.add_subplot(111)
+            
+            #df.plot(x='t', y='s', ax=ax)
+            df.plot(kind=plottype, ax=ax)
+            canvas = FigureCanvasTkAgg(fig, master=lf)
+            canvas.show()
+            canvas.get_tk_widget().grid(row=0, column=0)
+        
     def generate_spike_raster():
         display_app_status('Not implemented')
         return
-    
-    r = tk.Label(results_frame,text='Results to be displayed here, load in a run folder.\
-                 \nA graphics library will be written to display spike rasters, individual potentials, etc. ')
-    r.grid(column=0, row =0)
+    selected = {}
+    #selected = ['trace_hco10.dat', 'trace_hco21.dat']
+    def display_spike_train():
+       
+        if not bool(selected): #nothing selected
+            display_app_status('Nothing selected, stopping')
+            return
         
-    localrunButton = tk.Button(results_frame, text="Generate Spike Raster", command=generate_spike_raster)
-    localrunButton.grid(column=0, row =1, padx=5, pady=5, sticky='W')
+        cells_v = {}
+        #for fn in selected:
+        for fn, value in selected.items():
+            #filename = os.path.join(foldername.get(), fn)
+            if value.get() is 0:
+                continue
+            df = pd.read_csv(fn ,delim_whitespace=True,\
+                           skiprows=1,header=None,\
+                           names = ['Time', 'voltage'])
+            cellname = ''
+            search = 'trace_(.+?).dat'
+            m = re.search(search,fn)
+            if m:
+                cellname = m.group(1)
+            cells_v[cellname] = list(df['voltage'])
+        
+        #print(cells_v)
+        df_p = pd.DataFrame(cells_v, index=df['Time'])
+        
+        ShowGraphBox(results_frame, df_p)
+        return
+
+    
+    def load_results(*args):
+        selected.clear()
+        
+        for widget in cellslistbox.winfo_children():
+            widget.destroy()
+        results_trace_glob = os.path.join(foldername.get(),trace_file_prefix + '*' + trace_file_postfix)
+        available_traces = glob.glob(results_trace_glob)
+                
+        for i,trace in enumerate(available_traces):
+            var1 = tk.IntVar()
+            selected[trace] = var1
+            tk.Checkbutton(cellslistbox, text=trace, variable=var1).grid(row=i, sticky='w')
+        return
+        
+        
+    result_options = glob.glob(results_glob)
+    foldername = tk.StringVar(results_frame)
+    foldername.set('')#result_options[0])
+    foldername.trace("w",load_results)
+    
+    
+    
+    r = tk.Label(results_frame,text='Results loaded: ')
+    r.grid(column=0, row =0)
+    
+    fileMenu = tk.OptionMenu(results_frame, foldername, *result_options)
+    fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    
+    cellslistbox = tk.LabelFrame(results_frame, text='Cell Traces')
+    cellslistbox.grid(column=0,row=1,padx=5,sticky='WE',rowspan=99)
+        
+    localrunButton = tk.Button(results_frame, text="Show Spike Raster for all", command=generate_spike_raster)
+    localrunButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    
+    localrunButton = tk.Button(results_frame, text="Show Spike Activity for selected", command=display_spike_train)
+    localrunButton.grid(column=1, row =2, padx=5, pady=5, sticky='WE')
     
     ##############################
     
@@ -1650,7 +1983,7 @@ def main(root):
                                   "expand": [("selected", [1, 1, 1, 0])] } } } )
         style.theme_use("colored")
     except Exception:
-        print('style')
+        print('style already loaded')
     
     frame1 = tk.Frame(root)
     frame1.grid(row=0,column=0,sticky='news')
@@ -1704,11 +2037,10 @@ def reset_app_status():
 def display_app_status(str):
     app_status.set("Status: "+str)
     threading.Timer(4.0, reset_app_status).start()
-
-
+            
 root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
-root.title("Neuron Network Model Configuration (University of Missouri - Neural Engineering Laboratory - Nair)")
+root.title("Generalized Neuron Network Model (University of Missouri - Neural Engineering Laboratory - Nair)")
 root.geometry('1000x600')
 
 #root.resizable(0,0)
