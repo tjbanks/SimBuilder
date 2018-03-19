@@ -403,7 +403,7 @@ def menu_bar(root):
         print("hello!")
         
     def about():
-        messagebox.showinfo("About", "Simulation Builder written for:\nProfessor Satish Nair's Neural Engineering Laboratory\nat The University of Missouri\n\nContributors:\nTyler Banks,Ben Latimer,Satish Nair\n\nInitial Neuron Code:  Bezaire et al (2016), ModelDB (accession number 187604), and McDougal et al (2017)\n\nEmail tbg28@mail.missouri.edu with questions", icon='info')
+        messagebox.showinfo("About", "Simulation Builder written for:\nProfessor Satish Nair's Neural Engineering Laboratory\nat The University of Missouri\n\nWritten by: Tyler Banks\n\nContributors: Ben Latimer\n\nInitial Neuron Code:  Bezaire et al (2016), ModelDB (accession number 187604), and McDougal et al (2017)\n\nEmail tbg28@mail.missouri.edu with questions", icon='info')
 
     menubar = tk.Menu(root)
     
@@ -797,6 +797,9 @@ def cells_page(root):
         display_app_status('NumData parameter set to \"'+ filename.get() +'\" in current parameters file')
         return
 
+    def delete_current_file():
+        return
+    
     generate_files_available()
     
     d = defaultdict(list)
@@ -826,6 +829,10 @@ def cells_page(root):
     saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
     newCloneButton = tk.Button(top_option_frame, text="Save As", command=new_clone)
     newCloneButton.grid(column=2, row =1, padx=5, sticky='WE')
+    
+    deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
+    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.config(state=tk.DISABLED)
     
     
     
@@ -1101,6 +1108,9 @@ def connections_page(root):
             m.add_command(label=val,command=lambda v=filename,l=val:v.set(l))
         filename.set(newfilename)
         
+    def delete_current_file():
+        return
+        
     #generate_files_available()
     
     #Create the choice option panel
@@ -1119,6 +1129,10 @@ def connections_page(root):
     
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
     fileMenu.grid(column=1, row =0, padx=5, sticky='WE',columnspan=2)
+
+    deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
+    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=1, row =1, padx=5,pady=5, sticky='WE')
@@ -1507,6 +1521,8 @@ def synapses_page(root):
         display_app_status('SynData parameter set to \"'+ filename.get() +'\" in current parameters file')
         return
     
+    def delete_current_file():
+        return
     
     #generate_files_available()
     
@@ -1527,6 +1543,10 @@ def synapses_page(root):
         
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
     fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    
+    deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
+    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
@@ -1779,6 +1799,10 @@ def phasic_page(root):
             for i, row in r.iterrows():
                 pt.add_row(row)
     
+    def delete_current_file():
+        return
+    
+    
     tk.Button(table_frame_controls, text='Add Phasic Stimulus', command=add_phase).grid(column=0,row=0, padx=5, pady=5)
     
     
@@ -1798,6 +1822,10 @@ def phasic_page(root):
         
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
     fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    
+    deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
+    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
     saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
