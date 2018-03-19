@@ -357,7 +357,7 @@ class PandasTable(tk.Frame):
                 entity.grid(row=insert_i, column=j+3,sticky='news')
             elif self.options_dict is not None and self.options_dict.get(j,False):
                 temp = self.options_dict.get(j)[0]
-                entity = tk.OptionMenu(self.table_frame_internal, value, '' ,*temp)
+                entity = tk.OptionMenu(self.table_frame_internal, value ,*temp, '')
                 entity.config(width=20)
                 entity.grid(column=j+3,row=insert_i,sticky='NEWS')
             else:
@@ -1819,6 +1819,15 @@ def results_page(root):
     #######Build Section
     ##############################
     
+    def reload_results():   
+        options = glob.glob(results_glob)
+        m = fileMenu.children['menu']
+        m.delete(0,tk.END)
+        newvalues = options
+        for val in newvalues:
+            m.add_command(label=val,command=lambda v=foldername,l=val:v.set(l))
+        return
+    
     def run_command(command):
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return iter(p.stdout.readline, b'')
@@ -1834,6 +1843,7 @@ def results_page(root):
         console.insert('end', 'console > \n')
         console.configure(state='disabled')
         #display_app_status('Not implemented')
+        reload_results()
         return
     #TODO THREADING IS A WIP, need to convert everything to classes first to ensure we only run 1 at a time
     def run_command_in_console_threaded(command):
