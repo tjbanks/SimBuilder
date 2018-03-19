@@ -357,7 +357,7 @@ class PandasTable(tk.Frame):
                 entity.grid(row=insert_i, column=j+3,sticky='news')
             elif self.options_dict is not None and self.options_dict.get(j,False):
                 temp = self.options_dict.get(j)[0]
-                entity = tk.OptionMenu(self.table_frame_internal, value, *temp)
+                entity = tk.OptionMenu(self.table_frame_internal, value, '' ,*temp)
                 entity.config(width=20)
                 entity.grid(column=j+3,row=insert_i,sticky='NEWS')
             else:
@@ -655,6 +655,7 @@ def parameters_page(root):
     
     verifyBuildButton = tk.Button(top_option_frame, text="Verify Model Configuration", command=verify)
     verifyBuildButton.grid(column=1, row =0, padx=5, pady=5, sticky='W')
+    verifyBuildButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save Parameters File", command=save)
     saveButton.grid(column=0, row =0, padx=5, pady=5, sticky='W')
@@ -662,9 +663,11 @@ def parameters_page(root):
     
     importButton = tk.Button(import_export_frame, text="Import Model", command=import_model)
     importButton.grid(column=0, row =0, padx=5, pady=5, sticky='WE')
+    importButton.config(state=tk.DISABLED)
     
     exportButton = tk.Button(import_export_frame, text="Export Model", command=export_model)
     exportButton.grid(column=0, row =1, padx=5, pady=5, sticky='WE')
+    exportButton.config(state=tk.DISABLED)
     
     df = load(params_file)
     refresh(df)
@@ -1819,7 +1822,27 @@ def results_page(root):
     def run_command(command):
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return iter(p.stdout.readline, b'')
+
+    def run_command_in_console(command):
+        console.configure(state='normal')
+        console.insert('end', 'console > ' + command + '\n\n')
+        command = command.split()
+        for line in run_command(command):
+            string = line.decode('unicode_escape')
+            console.insert('end', '' + string)
+            console.see(tk.END)
+        console.insert('end', 'console > \n')
+        console.configure(state='disabled')
+        #display_app_status('Not implemented')
+        return
+    #TODO THREADING IS A WIP, need to convert everything to classes first to ensure we only run 1 at a time
+    def run_command_in_console_threaded(command):
+        import threading
+        t1 = threading.Thread(target=lambda r=command:run_command_in_console(r))
+        t1.start()
+        return
     
+        
     def generate_batch():
         #Create popup with questions for batch, with defaults loaded from json file
         display_app_status('Not implemented')
@@ -1828,22 +1851,21 @@ def results_page(root):
     def build_run_batch():
         generate_batch()
         
+    
     def local_run():
-        command = 'nrniv main.hoc'.split()
-        for line in run_command(command):
-            console.configure(state='normal')
-            console.insert('end', '> ' + str(line))
-            console.configure(state='disabled')
-        display_app_status('Not implemented')
+        run = 'nrniv main.hoc'
+        run_command_in_console_threaded(run)
         return
     
     buildButton = tk.Button(buildrun_frame, text="Build Parallel Batch", command=generate_batch)
     buildButton.grid(column=0, row =0, padx=5, pady=5, sticky='WE')
+    buildButton.config(state=tk.DISABLED)
     
     buildrunButton = tk.Button(buildrun_frame, text="Build & Run Parallel Batch", command=build_run_batch)
     buildrunButton.grid(column=0, row =1, padx=5, pady=5, sticky='WE')
+    buildrunButton.config(state=tk.DISABLED)
     
-    localrunButton = tk.Button(buildrun_frame, text="Run Locally on this Machine", command=local_run)
+    localrunButton = tk.Button(buildrun_frame, text="Run on this Single Machine", command=local_run)
     localrunButton.grid(column=2, row =0, padx=5, pady=5, sticky='WE')
     
     ##############################
@@ -1936,11 +1958,12 @@ def results_page(root):
     cellslistbox = tk.LabelFrame(results_frame, text='Cell Traces')
     cellslistbox.grid(column=0,row=1,padx=5,sticky='WE',rowspan=99)
         
-    localrunButton = tk.Button(results_frame, text="Show Spike Raster for all", command=generate_spike_raster)
-    localrunButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    spikerasterButton = tk.Button(results_frame, text="Show Spike Raster for all", command=generate_spike_raster)
+    spikerasterButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    spikerasterButton.config(state=tk.DISABLED)
     
-    localrunButton = tk.Button(results_frame, text="Show Spike Activity for selected", command=display_spike_train)
-    localrunButton.grid(column=1, row =2, padx=5, pady=5, sticky='WE')
+    graphspikeButton = tk.Button(results_frame, text="Show Spike Activity for selected", command=display_spike_train)
+    graphspikeButton.grid(column=1, row =2, padx=5, pady=5, sticky='WE')
     
     ##############################
     
@@ -1951,13 +1974,11 @@ def results_page(root):
     c.grid(column=0, row=0)
     
     console = tk.Text(console_frame)
-    console.config(width= 50, height=25, bg='black',fg='light green')
+    console.config(width= 70, height=25, bg='black',fg='light green')
     console.grid(column=0, row=1, padx=5, pady=5, sticky='NEWS')
     
     console.configure(state='normal')
-    console.insert('end', '> batch.sh\n')
-    console.insert('end', '> nrnivmodl\n')
-    console.insert('end', '> nrniv main.hoc\n')
+    console.insert('end', 'console > \n')
     console.configure(state='disabled')
     
     ##############################
@@ -2028,7 +2049,12 @@ def main(root):
     bind_page(page8, results_page)
     
     display_app_status("Ready")
-    root.mainloop()
+    try:
+        print('Starting Sim Builder')
+        root.mainloop()
+    except Exception:
+        print('Error, closing display loop')
+    print('Closing Sim Builder')
 
 default_status = "Status: Ready"
 def reset_app_status():
@@ -2040,8 +2066,8 @@ def display_app_status(str):
             
 root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
-root.title("Generalized Neuron Network Model (University of Missouri - Neural Engineering Laboratory - Nair)")
-root.geometry('1000x600')
+root.title("Generalized Neuron Network Model Builder (University of Missouri - Neural Engineering Laboratory - Nair) BETA VERSION")
+root.geometry('1050x600')
 
 #root.resizable(0,0)
 root.config(menu=menu_bar(root))
