@@ -1190,6 +1190,7 @@ def synapses_page(root):
     
             top = self.top = tk.Toplevel(parent)
             top.geometry('475x450')
+            top.resizable(0,0)
             tk.Label(top, text='Create new synapse:\nValues from currently loaded cells file.').grid(row=0,column=0,sticky="WE",columnspan=2)
             
             gaba_extras = tk.Frame(top)
@@ -1905,6 +1906,13 @@ def results_page(root):
     
     localrunButton = tk.Button(buildrun_frame, text="Run on this Single Machine", command=local_run)
     localrunButton.grid(column=2, row =0, padx=5, pady=5, sticky='WE')
+    
+    #I envision this button to open a popup to configure a remote connection, sftp all files in this directory
+    #Maybe treating this as a git repository, some sort of version control, so we can copy the results back to 
+    #this system, may be a huge pain to implement/not worth it
+    buildrunButton = tk.Button(buildrun_frame, text="Run on Remote System (SSH)", command=build_run_batch)
+    buildrunButton.grid(column=2, row =1, padx=5, pady=5, sticky='WE')
+    buildrunButton.config(state=tk.DISABLED)
     
     ##############################
     
