@@ -1857,15 +1857,21 @@ def results_page(root):
         return
     
     def run_command(command):
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        return iter(p.stdout.readline, b'')
+        try:
+            p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return iter(p.stdout.readline, b'')
+        except Exception as e:
+            return iter(str(e).splitlines())
 
     def run_command_in_console(command):
         console.configure(state='normal')
         console.insert('end', 'console > ' + command + '\n\n')
         command = command.split()
         for line in run_command(command):
-            string = line.decode('unicode_escape')
+            try:
+                string = line.decode('unicode_escape')
+            except Exception:
+                string = line
             console.insert('end', '' + string)
             console.see(tk.END)
         console.insert('end', 'console > \n')
