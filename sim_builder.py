@@ -450,10 +450,14 @@ def bind_page(page, gen_frame):
     
 
 params_dict = {'aaa':tk.StringVar(root,'bbb'),\
-               'loaded_cellnums':tk.StringVar(root,'none'),\
-               'loaded_conndata':tk.StringVar(root,'none'),\
-               'loaded_syndata':tk.StringVar(root,'none'),\
-               'loaded_phasicdata':tk.StringVar(root,'none')}
+               'loaded_cellnums':tk.StringVar(root,''),\
+               'loaded_conndata':tk.StringVar(root,''),\
+               'loaded_syndata':tk.StringVar(root,''),\
+               'loaded_phasicdata':tk.StringVar(root,''),
+               'params_cellnums':tk.StringVar(root,''),
+               'params_conndata':tk.StringVar(root,''),
+               'params_syndata':tk.StringVar(root,''),
+               'params_phasicdata':tk.StringVar(root,''),}
 
 def get_public_param(param):
     try:
@@ -574,7 +578,8 @@ def parameters_page(root):
         file.close()
         
         display_app_status('Parameters \"'+params_file+'\" saved')
-        
+        df = load(params_file)
+        re_set_file_params(df)
         return
     
     general_frame = tk.LabelFrame(table_frame, text="General",fg="blue")
@@ -590,10 +595,10 @@ def parameters_page(root):
     lfp_frame = tk.LabelFrame(table_frame, text="LFP Config",fg="blue")
     lfp_frame.grid(column=1,row=1,sticky='news',padx=10,pady=5)
     
-    
+    param_file_vars = ['ConnData','SynData','NumData','PhasicData']
     general_vars = ['RunName', 'Scale','SimDuration','StepBy','TemporalResolution','RandomVrest','RandomVinit']
     space_vars = ['TransverseLength','LongitudinalLength','LayerHeights','SpatialResolution']
-    dropdown_vars = ['ConnData','SynData','NumData','PhasicData','Connectivity','Stimulation']
+    dropdown_vars = ['Connectivity','Stimulation']
     print_vars = ['PrintVoltage','PrintTerminal','PrintConnDetails','PrintCellPositions','PrintConnSummary','CatFlag','EstWriteTime','NumTraces']
     lfp_vars = ['lfp_dt','ElectrodePoint','ComputeNpoleLFP','ComputeDipoleLFP','LFPCellTypes','MaxEDist']
     
@@ -618,7 +623,7 @@ def parameters_page(root):
             frame = misc_frame
             if temp[0] in general_vars:
                 frame=general_frame
-            elif temp[0] in dropdown_vars:
+            elif temp[0] in dropdown_vars or temp[0] in param_file_vars:
                 frame=dropdown_frame
             elif temp[0] in space_vars:
                 frame=space_frame
@@ -641,7 +646,21 @@ def parameters_page(root):
         Row(lfp_frame).pack(pady=padtopbot)
         return
     
+    def re_set_file_params(df):
+        for i, row in df.iterrows():
+            temp = []
+            temp.append(row.tolist())
+            temp = temp[0]
+            if temp[0] in param_file_vars:
+                set_public_param(temp[0],temp[1])
+        return
+    
     def verify():
+        display_app_status('Not implemented')
+        return
+    
+    def load_configs():
+        
         display_app_status('Not implemented')
         return
         
@@ -656,6 +675,10 @@ def parameters_page(root):
     verifyBuildButton = tk.Button(top_option_frame, text="Verify Model Configuration", command=verify)
     verifyBuildButton.grid(column=1, row =0, padx=5, pady=5, sticky='W')
     verifyBuildButton.config(state=tk.DISABLED)
+    
+    loadConfigsButton = tk.Button(top_option_frame, text="Load Parameters into Views", command=load_configs)
+    loadConfigsButton.grid(column=2, row =0, padx=5, pady=5, sticky='W')
+    loadConfigsButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save Parameters File", command=save)
     saveButton.grid(column=0, row =0, padx=5, pady=5, sticky='W')
@@ -700,6 +723,9 @@ def cells_page(root):
                 cellclasses_a.append(m.group(1))
     
     def load(*args):
+        if not filename.get() or filename.get() is '':
+            return
+    
         #print ("loading: " + filename.get())
         cellnums_pd = pd.read_csv(filename.get() ,delimiter=' ',\
                        skiprows=1,header=None,\
@@ -788,6 +814,7 @@ def cells_page(root):
     
     def set_numdata_param():
         fn = filename.get()
+        
         search = cellnums_file_prefix+'(.+?)'+cellnums_file_postfix
         m = re.search(search,fn)
         if m:
@@ -800,6 +827,12 @@ def cells_page(root):
     def delete_current_file():
         return
     
+    def load_numdata_param():
+        numdat = get_public_param("NumData")
+        numdat = os.path.join(dataset_folder, cellnums_file_prefix + numdat + cellnums_file_postfix)
+        #filename.set('')
+        filename.set(numdat)
+    
     generate_files_available()
     
     d = defaultdict(list)
@@ -809,29 +842,32 @@ def cells_page(root):
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
     
-    numdat = get_public_param("NumData")
-    numdat = os.path.join(dataset_folder, cellnums_file_prefix + numdat + cellnums_file_postfix)
-    filename.set(numdat)
+    #numdat = get_public_param("NumData")
+    #numdat = os.path.join(dataset_folder, cellnums_file_prefix + numdat + cellnums_file_postfix)
+    filename.set('')
+    #filename.set(numdat)
     #filename.set(options[0])
         
     load()#initial load
     
     
     newButton = tk.Button(top_option_frame, text="New", command=new,width=30)
-    newButton.grid(column=0, row =0, padx=5, sticky='WE')
-    useButton = tk.Button(top_option_frame, text="Set as NumData parameter", command=set_numdata_param,width=30)
+    newButton.grid(column=0, row =0, padx=5,columnspan=2, sticky='WE')
+    useButton = tk.Button(top_option_frame, text="Set as NumData", command=set_numdata_param,width=15)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
+    loadButton = tk.Button(top_option_frame, text="Load NumData", command=load_numdata_param,width=15)
+    loadButton.grid(column=1, row =1, padx=5, sticky='W')
     
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=1, row =0, padx=5, sticky='WE',columnspan=2)    
+    fileMenu.grid(column=2, row =0, padx=5, sticky='WE',columnspan=2)    
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    saveButton.grid(column=2, row =1, padx=5, pady=5, sticky='WE')
     newCloneButton = tk.Button(top_option_frame, text="Save As", command=new_clone)
-    newCloneButton.grid(column=2, row =1, padx=5, sticky='WE')
+    newCloneButton.grid(column=3, row =1, padx=5, sticky='WE')
     
     deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
-    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.grid(column=4, row =0, padx=5, pady=5, sticky='W')
     deleteButton.config(state=tk.DISABLED)
     
     
@@ -955,7 +991,11 @@ def connections_page(root):
     
     def load(*args,load_from=None):
         if not load_from:
-            load_from = filename.get()
+            if not filename.get() or filename.get() is '':
+                return
+            else:
+                load_from = filename.get()
+        
             
         df = pd.read_csv(load_from ,delimiter=' ',\
                        skiprows=1,header=None,\
@@ -1110,34 +1150,40 @@ def connections_page(root):
         
     def delete_current_file():
         return
-        
+    
+    def load_conndata_param():
+        conndat = get_public_param("ConnData")
+        conndat = os.path.join(dataset_folder, conndata_file_prefix + numdat + conndata_file_postfix)
+        #filename.set('')
+        filename.set(numdat)
+
     #generate_files_available()
     
     #Create the choice option panel
     filename = tk.StringVar(top_option_frame)
     filename.trace("w",load)
     
-    conndat = get_public_param("ConnData")
-    conndat = os.path.join(dataset_folder, conndata_file_prefix + conndat + conndata_file_postfix)
-    filename.set(conndat)
+    filename.set('')
     #filename.set(options[0])
-    
+                
     newFromCellsButton = tk.Button(top_option_frame, text="Generate New from Current Cells File", command=new, width=30)
-    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=1)
-    useButton = tk.Button(top_option_frame, text="Set as ConnData parameter", command=set_conndata_param, width=30)
+    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE',columnspan=2)
+    useButton = tk.Button(top_option_frame, text="Set as ConnData", command=set_conndata_param, width=15)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
+    loadButton = tk.Button(top_option_frame, text="Load ConnData", command=load_conndata_param,width=15)
+    loadButton.grid(column=1, row =1, padx=5, sticky='W')
     
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=1, row =0, padx=5, sticky='WE',columnspan=2)
+    fileMenu.grid(column=2, row =0, padx=5, sticky='WE',columnspan=2)
 
     deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
-    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.grid(column=4, row =0, padx=5, pady=5, sticky='W')
     deleteButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=1, row =1, padx=5,pady=5, sticky='WE')
+    saveButton.grid(column=2, row =1, padx=5,pady=5, sticky='WE')
     newFromCurrentButton = tk.Button(top_option_frame, text="Save As", command=new_clone_current)
-    newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
+    newFromCurrentButton.grid(column=3, row =1, padx=5, sticky='WE')
     
     
 def synapses_page(root):
@@ -1411,6 +1457,9 @@ def synapses_page(root):
     
     def load(*args):
         #print ("loading: " + filename.get())
+        if not filename.get() or filename.get() is '':
+            return
+        
         df = pd.read_csv(filename.get() ,delim_whitespace=True,\
                        skiprows=1,header=None,\
                        names = synapse_column_names)
@@ -1533,7 +1582,8 @@ def synapses_page(root):
     
     syndat = get_public_param("SynData")
     syndat = os.path.join(dataset_folder, syndata_file_prefix + syndat + syndata_file_postfix)
-    filename.set(syndat)
+    filename.set('')
+    #filename.set(syndat)
     
     #filename.set(options[0])
     
@@ -1687,7 +1737,8 @@ def phasic_page(root):
                 cellclasses_a.append(m.group(1))
     
     def load(*args):
-        
+        if not filename.get() or filename.get() is '':
+            return
         df = pd.read_csv(filename.get() ,delim_whitespace=True,\
                        skiprows=1,header=None,\
                        names = phase_column_list)
@@ -1813,7 +1864,8 @@ def phasic_page(root):
     
     phasicdat = get_public_param("PhasicData")
     phasicdat = os.path.join(dataset_folder, phasicdata_file_prefix + phasicdat + phasicdata_file_postfix)
-    filename.set(phasicdat)
+    filename.set('')
+    #filename.set(phasicdat)
     #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new_generate, width=30)

@@ -1,7 +1,3 @@
-// This file sets the default values of parameters
-//  in such a way that they can be overridden using
-//  certain options at the command line
- 
 default_var("RunName","testrun")		// Name of simulation run
 default_var("UID","0")		// Unique ID for this simulation run
 default_var("Stimulation","spontaneous")		// Filename of the stimulation protocol used to stimulate the network
