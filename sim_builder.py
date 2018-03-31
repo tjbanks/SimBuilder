@@ -1164,15 +1164,9 @@ def connections_page(root):
     
     def load_conndata_param():
         conndat = get_public_param("ConnData")
-<<<<<<< HEAD
-        conndat = os.path.join(dataset_folder, conndata_file_prefix + numdat + conndata_file_postfix)
-        #filename.set('')
-        filename.set(numdat)
-=======
         conndat = os.path.join(dataset_folder, conndata_file_prefix + conndat + conndata_file_postfix)
         #filename.set('')
         filename.set(conndat)
->>>>>>> master
 
     #generate_files_available()
     
