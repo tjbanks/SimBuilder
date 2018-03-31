@@ -2004,7 +2004,7 @@ def results_page(root):
     r = tk.Label(results_frame,text='Results loaded: ')
     r.grid(column=0, row =0)
     
-    fileMenu = tk.OptionMenu(results_frame, foldername, *result_options)
+    fileMenu = tk.OptionMenu(results_frame, foldername, *result_options,'')
     fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
     
     cellslistbox = tk.LabelFrame(results_frame, text='Cell Traces')
