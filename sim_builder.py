@@ -721,6 +721,11 @@ def cells_page(root):
             m = re.search(search, c)
             if m:
                 cellclasses_a.append(m.group(1))
+                
+    
+    def update_scrollbar(panda_table_root):
+        panda_table_root.update()
+        root.master.configure(scrollregion=(0, 0, panda_table_root.winfo_width()*1.25, panda_table_root.winfo_height()*1.5 ))
     
     def load(*args):
         if not filename.get() or filename.get() is '':
@@ -735,8 +740,10 @@ def cells_page(root):
         cellnums_pd[column_names[4]] = cellnums_pd[column_names[4]].astype(int)
         pt.set_dataframe(cellnums_pd, options_dict=d, show_numbering=True, show_delete_row=True, first_column_is_header=False)
         pt.pack()
-        set_public_param("loaded_cellnums",filename.get())
         
+        update_scrollbar(pt.root)
+        
+        set_public_param("loaded_cellnums",filename.get())
         display_app_status('Cells file \"'+filename.get()+'\" loaded')
        
     def save(save_to=None):
@@ -989,6 +996,10 @@ def connections_page(root):
         
         return
     
+    def update_scrollbar(panda_table_root):
+        panda_table_root.update()
+        root.master.configure(scrollregion=(0, 0, panda_table_root.winfo_width()*1.25, panda_table_root.winfo_height()*1.5 ))
+    
     def load(*args,load_from=None):
         if not load_from:
             if not filename.get() or filename.get() is '':
@@ -1002,7 +1013,7 @@ def connections_page(root):
                        names = ["Friendly Cell Name", "Cell File Name", "Num Cells", "Layer Index","Artificial:1 Real:0"])
         
         set_whole_df(df)
-        
+        update_scrollbar(synaptic_weight_page_obj.pt.root)
         display_app_status('Connections Data file \"'+filename.get()+'\" loaded')
         return
        
@@ -1153,9 +1164,9 @@ def connections_page(root):
     
     def load_conndata_param():
         conndat = get_public_param("ConnData")
-        conndat = os.path.join(dataset_folder, conndata_file_prefix + numdat + conndata_file_postfix)
+        conndat = os.path.join(dataset_folder, conndata_file_prefix + conndat + conndata_file_postfix)
         #filename.set('')
-        filename.set(numdat)
+        filename.set(conndat)
 
     #generate_files_available()
     
@@ -1415,6 +1426,7 @@ def synapses_page(root):
             return
         if d.verify_good():
             synapses_page_obj.add_row(d.get_values())
+            update_scrollbar(synapses_page_obj.pt.root)
     
     top_option_frame = tk.LabelFrame(root, text="File Management")
     table_frame = tk.LabelFrame(root, text="Synapse Data")
@@ -1454,6 +1466,10 @@ def synapses_page(root):
             m = re.search(search, c)
             if m:
                 cellclasses_a.append(m.group(1))
+                
+    def update_scrollbar(panda_table_root):
+        panda_table_root.update()
+        root.master.configure(scrollregion=(0, 0, panda_table_root.winfo_width()*1.1, panda_table_root.winfo_height()*1.1 ))
     
     def load(*args):
         #print ("loading: " + filename.get())
@@ -1471,7 +1487,7 @@ def synapses_page(root):
         page1.grid_forget()
         synapses_page_obj.refresh(df)
         page1.grid(column=0,row=0,sticky='news')
-        
+        update_scrollbar(synapses_page_obj.pt.root)
         display_app_status('Synapse Data file \"'+filename.get()+'\" loaded')
        
     def save(save_to=None):
@@ -1497,7 +1513,6 @@ def synapses_page(root):
         file.write(tb)
         file.close()
         display_app_status('Synapse Data file \"'+filename.get()+'\" saved')
-        
         return
     
     def new():
@@ -1574,6 +1589,11 @@ def synapses_page(root):
     def delete_current_file():
         return
     
+    def load_syndata_param():
+        syndata = get_public_param("SynData")
+        syndata = os.path.join(dataset_folder, syndata_file_prefix + syndata + syndata_file_postfix)
+        #filename.set('')
+        filename.set(syndata)
     #generate_files_available()
     
     #Create the choice option panel
@@ -1588,21 +1608,23 @@ def synapses_page(root):
     #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new, width=30)
-    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    useButton = tk.Button(top_option_frame, text="Set as SynData parameter", command=set_syndata_param, width=30)
+    newFromCellsButton.grid(column=0, row =0, padx=5, columnspan=2, sticky='WE')
+    useButton = tk.Button(top_option_frame, text="Set as SynData", command=set_syndata_param, width=15)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
+    loadButton = tk.Button(top_option_frame, text="Load SynData", command=load_syndata_param, width=15)
+    loadButton.grid(column=1, row =1, padx=5, sticky='W')
         
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    fileMenu.grid(column=2, row =0, padx=5, sticky='WE', columnspan=2)
     
     deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
-    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.grid(column=4, row =0, padx=5, pady=5, sticky='W')
     deleteButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    saveButton.grid(column=2, row =1, padx=5, pady=5, sticky='WE')
     newFromCurrentButton = tk.Button(top_option_frame, text="Save As", command=new_clone_current)
-    newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
+    newFromCurrentButton.grid(column=3, row =1, padx=5, sticky='WE')
     
 
     return
@@ -1735,6 +1757,10 @@ def phasic_page(root):
             m = re.search(search, c)
             if m:
                 cellclasses_a.append(m.group(1))
+                
+    def update_scrollbar(panda_table_root):
+        panda_table_root.update()
+        root.master.configure(scrollregion=(0, 0, panda_table_root.winfo_width()*1.1, panda_table_root.winfo_height()*1.1 ))
     
     def load(*args):
         if not filename.get() or filename.get() is '':
@@ -1747,7 +1773,7 @@ def phasic_page(root):
         pt.set_dataframe(df, show_delete_row=True,\
                                   show_header=True, show_numbering=True, \
                                   first_column_is_id=False, immutable_values=["nan"])
-        
+        update_scrollbar(pt.root)       
         display_app_status('Phasic Data file \"'+filename.get()+'\" loaded')
        
     def save(save_to=None):
@@ -1854,6 +1880,13 @@ def phasic_page(root):
     def delete_current_file():
         return
     
+    def load_phasicdata_param():
+        phasicdata = get_public_param("PhasicData")
+        phasicdata = os.path.join(dataset_folder, phasicdata_file_prefix + phasicdata + phasicdata_file_postfix)
+        #filename.set('')
+        filename.set(phasicdata)
+        
+    
     
     tk.Button(table_frame_controls, text='Add Phasic Stimulus', command=add_phase).grid(column=0,row=0, padx=5, pady=5)
     
@@ -1869,21 +1902,23 @@ def phasic_page(root):
     #filename.set(options[0])
     
     newFromCellsButton = tk.Button(top_option_frame, text="Create New", command=new_generate, width=30)
-    newFromCellsButton.grid(column=0, row =0, padx=5, sticky='WE')
-    useButton = tk.Button(top_option_frame, text="Set as PhasicData parameter", command=set_phasicdata_param, width=30)
+    newFromCellsButton.grid(column=0, row =0, padx=5, columnspan=2, sticky='WE')
+    useButton = tk.Button(top_option_frame, text="Set as PhasicData", command=set_phasicdata_param, width=15)
     useButton.grid(column=0, row =1, padx=5, sticky='W')
+    loadButton = tk.Button(top_option_frame, text="Load PhasicData", command=load_phasicdata_param, width=15)
+    loadButton.grid(column=1, row =1, padx=5, sticky='W')
         
     fileMenu = tk.OptionMenu(top_option_frame, filename, *options)
-    fileMenu.grid(column=1, row =0, padx=5, sticky='WE', columnspan=2)
+    fileMenu.grid(column=2, row =0, padx=5, sticky='WE', columnspan=2)
     
     deleteButton = tk.Button(top_option_frame, text="Delete", command=delete_current_file)
-    deleteButton.grid(column=3, row =0, padx=5, pady=5, sticky='W')
+    deleteButton.grid(column=4, row =0, padx=5, pady=5, sticky='W')
     deleteButton.config(state=tk.DISABLED)
     
     saveButton = tk.Button(top_option_frame, text="Save", command=save)
-    saveButton.grid(column=1, row =1, padx=5, pady=5, sticky='WE')
+    saveButton.grid(column=2, row =1, padx=5, pady=5, sticky='WE')
     newFromCurrentButton = tk.Button(top_option_frame, text="Save As", command=new_clone_current)
-    newFromCurrentButton.grid(column=2, row =1, padx=5, sticky='WE')
+    newFromCurrentButton.grid(column=3, row =1, padx=5, sticky='WE')
 
     return
 
