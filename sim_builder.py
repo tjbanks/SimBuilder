@@ -712,7 +712,8 @@ def cells_page(root):
     
     cellclasses_a = []
     options = glob.glob(cellnums_glob)
-    
+    if len(options) is 0:
+        options.append('')
     
     def generate_files_available():
         cellclasses_a.clear()
@@ -952,7 +953,9 @@ def connections_page(root):
         
     cellclasses_a = []
     options = glob.glob(connections_glob)
-    
+    if len(options) is 0:
+        options.append('')
+        
     d = defaultdict(list)
     d[1].append(cellclasses_a)
             
@@ -1449,7 +1452,9 @@ def synapses_page(root):
     
     cellclasses_a = []
     options = glob.glob(syndata_glob)
-    
+    if len(options) is 0:
+        options.append('')
+        
     d = defaultdict(list)
     d[1].append(cellclasses_a)
     
@@ -1654,6 +1659,8 @@ def phasic_page(root):
     
     cellclasses_a = []
     options = glob.glob(phasicdata_glob)
+    if len(options) is 0:
+        options.append('')
     
     d = defaultdict(list)
     d[1].append(cellclasses_a)
