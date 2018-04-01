@@ -1,13 +1,13 @@
 // Replace all USER_DEFINED_SECTIONs
 
-begintemplate template //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
+begintemplate InterneuronCell //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
 public init, connect_sections, size_sections, append_sections
 public mechinit, insert_mechs, set_biophys, get_root
 public  pre_list, connect_pre, is_art, is_connected, gid, randi
 public soma, dend
 public all, basal_list, apical_list, soma_list, axon_list, dendrite_list
 public x, y, z, position, myroot, Vrest
-public NumSoma, NumApical, NumBasal, NumAxon
+public NumSoma, NumApical, NumBasal, NumAxon, NumDend
 
 // strings
 strdef myroot
@@ -20,8 +20,8 @@ external numCellTypes, cellType
 
 // create the sections[segments]
 //BEGIN_USER_DEFINED_SECTION
-NumSoma=0
-NumApical=0
+NumSoma=1
+NumApical=1
 NumBasal=0
 NumAxon=0
 
@@ -32,6 +32,70 @@ create soma[NumSoma], dend[NumApical]
 proc init() {
 	gid = $1
 	randi = $2
+	
+	/////// topology ////////
+
+		connect dend[0](0), soma[0](1)
+
+		/////// geometry ////////
+		soma[0] {
+			nseg=1
+			L=15		// (micrometer)
+			diam=15		// (micrometer)
+	    	}
+
+		dend[0] {
+			nseg=1
+			L=150		// (micrometer)
+			diam=10		// (micrometer)
+		}
+
+		/////// biophysics //////
+		soma[0] {
+			cm = 1		    // (microF/cm2)
+			Ra = 150*22.5	// (ohm-cm)
+			Rm = 20000	    // (ohm-cm2)
+			
+			insert leakinter
+			glbar_inter_leakinter = 1/Rm // (siemens/cm2)
+			el_leakinter = -70	// (mV)
+
+			insert nainter
+			insert kdrinter
+	    	}
+
+		dend[0] {
+			cm = 1		// (microF/cm2)
+			Ra = 150	// (ohm-cm)
+			Rm = 20000	// (ohm-cm2)
+			
+			insert leakinter
+			glbar_inter_leakinter = 1/Rm // (siemens/cm2)
+			el_leakinter = -70	// (mV)
+
+			insert nainter
+			insert kdrinter
+		}
+		soma[0] {
+			ena = 45		// (mV)
+			gnabar_nainter = 0.035	// (siemens/cm2)
+
+			ek = -80		// (mV)
+			gkdrbar_kdrinter = 0.008 // (siemens/cm2)
+			
+		}
+
+		dend[0] {
+			ena = 45		// (mV)
+			gnabar_nainter = 0.010	// (siemens/cm2)
+
+			ek = -80		// (mV)
+			gkdrbar_kdrinter = 0.003 // (siemens/cm2)
+			
+			insert ca_ion
+			eca = 120
+		}
+	
 	
 	// morphology
 	connect_sections()	// local fcn: connect soma, dendrites, axon initial segment
@@ -62,7 +126,6 @@ proc connect_sections() { local i
 	//BEGIN_USER_DEFINED_SECTION
 	
 	
-	
 	//END_USER_DEFINED_SECTION
 	
 }
@@ -90,6 +153,11 @@ proc append_sections() { local i
 	//BEGIN_USER_DEFINED_SECTION
 	
 	
+	for i=0,NumSoma-1 soma[i] { all.append()
+								soma_list.append()}		
+	for i=0,NumApical-1 apical[i] { all.append()
+								apical_list.append()	
+								dendrite_list.append()} 
 	
 	//END_USER_DEFINED_SECTION
 }
@@ -251,4 +319,4 @@ proc define_synapses() {
 		findme = 1
 	}
 }
-endtemplate template //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
+endtemplate InterneuronCell //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION

@@ -1,6 +1,6 @@
 // Replace all USER_DEFINED_SECTIONs
 
-begintemplate template //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
+begintemplate Cell_BDANE //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
 public init, connect_sections, size_sections, append_sections
 public mechinit, insert_mechs, set_biophys, get_root
 public  pre_list, connect_pre, is_art, is_connected, gid, randi
@@ -20,18 +20,61 @@ external numCellTypes, cellType
 
 // create the sections[segments]
 //BEGIN_USER_DEFINED_SECTION
-NumSoma=0
+NumSoma=1
 NumApical=0
 NumBasal=0
 NumAxon=0
 
-create soma[NumSoma], dend[NumApical]
+create soma[NumSoma]//, dend[NumApical]
 
 //END_USER_DEFINED_SECTION
 	
 proc init() {
 	gid = $1
 	randi = $2
+	
+	
+	gUnf_Xsoma = 2.5e-05
+	Rm = 80000 // decreased overall
+	SpineScale = 1.76371308 //2
+	SpineScale_leak = 1.763714578
+	RaAll= 200
+	RaSoma= 146.969697 //200 
+	RaAxIs = 100//100//200
+	Vpas = -70//-65//-69 // -67
+	gna =  0.039//.03*0.6*1.5 //.03*0.6*1.5 /* decreased from 0.03 */
+	AXONM = 3 /*decrease from 2 */
+	gkdr = 0.005*.6 /* decreased from 0.005 */
+	ghd=0.000003 *.7
+	nash=10
+	Vrest = -67
+	celsius = 31.0 
+	gsAHP = 0.0005
+	GmC = 0.0096//0.0085//0.006 //0.0035 //0.0006
+
+     /////geometrical properties/////
+	soma[0] {nseg = 1 L = 25 diam = 24.75} // L = 117.77 diam = 24.5   //// area ratio is 4.6632
+	
+	soma[0] {
+		insert cadyn gcabar_cadyn = 5.5e-4 eca = 120
+		insert leakDA el_leakDA= -72  glbar_leakDA = 5.5e-5 Ra=RaAll cm=2.5
+		insert hd ghdbar_hd=1.5e-5  78.72884325  
+		insert na3DA sh_na3DA=nash ar_na3DA=1	gbar_na3DA = 0.027
+		insert nap gbar_nap= 0.000142
+		insert kdrDA gbar_kdrDA=0.002//0.0015
+		insert capool taucas = 1000  fcas_capool = 0.05 
+		insert sAHPNE gsAHPbar_sAHPNE = 1.5e-4//2e-4
+		insert im gbar_im = 6e-4
+		insert kap gkabar_kap =0.002 //  0.02
+
+		
+		ena = 45
+		ek = -80
+		if (ismembrane("kdrDA") || ismembrane("kap") ) {ek=-80} //???
+		if (ismembrane("hd") ) {ehd_hd=-43 } // change from -30 to -50 //???
+		}
+	
+	
 	
 	// morphology
 	connect_sections()	// local fcn: connect soma, dendrites, axon initial segment
@@ -89,8 +132,8 @@ proc append_sections() { local i
 	// }
 	//BEGIN_USER_DEFINED_SECTION
 	
-	
-	
+        soma[0] all.append()	
+        soma[0] soma_list.append()	
 	//END_USER_DEFINED_SECTION
 }
 
@@ -251,4 +294,4 @@ proc define_synapses() {
 		findme = 1
 	}
 }
-endtemplate template //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
+endtemplate Cell_BDANE //BEGIN_USER_DEFINED_SECTION templatename END_USER_DEFINED_SECTION
