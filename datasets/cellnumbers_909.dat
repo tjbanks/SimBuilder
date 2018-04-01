@@ -1,4 +1,4 @@
-12
+13
 Cell_A Cell_A 1 0 0
 Cell_ADA Cell_ADA 1 0 0
 Cell_ADANE Cell_ADANE 1 0 0
@@ -11,3 +11,4 @@ Cell_C Cell_C 1 0 0
 Cell_CDA Cell_CDA 1 0 0
 Cell_CDANE Cell_CDANE 1 0 0
 Cell_CNE Cell_CNE 1 0 0
+InterneuronCell InterneuronCell 1 0 0
