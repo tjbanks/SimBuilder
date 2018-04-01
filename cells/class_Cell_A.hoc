@@ -25,7 +25,7 @@ NumApical=0
 NumBasal=0
 NumAxon=0
 
-create soma[NumSoma], dend[NumApical]
+create soma[NumSoma]//, dend[NumApical]
 
 //END_USER_DEFINED_SECTION
 	
@@ -58,9 +58,9 @@ proc init() {
 	GmC = 0.0096//0.0085//0.006 //0.0035 //0.0006
 
      /////geometrical properties/////
-	soma {nseg = 1  L = 25 diam = 24.75} // L = 117.77 diam = 24.5   //// area ratio is 4.6632
+	soma[0] {nseg = 1  L = 25 diam = 24.75} // L = 117.77 diam = 24.5   //// area ratio is 4.6632
 	
-	soma {
+	soma[0] {
 	
 	    insert cadyn gcabar_cadyn = 5.5e-4  eca = 120
 		insert leak el_leak= -72 glbar_leak = 5.5e-5  Ra=RaAll cm=2.5 
@@ -140,8 +140,8 @@ proc append_sections() { local i
 	// }
 	//BEGIN_USER_DEFINED_SECTION
 	
-	
-	
+        soma[0] all.append()	
+        soma[0] soma_list.append()	
 	//END_USER_DEFINED_SECTION
 }
 

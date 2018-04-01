@@ -1,3 +1,3 @@
 2
-CellA-2 CellA-1 MyExp2Sid soma_list distance(x)>-1 distance(x)<10000 2.0 6.3 0.0   
-CellA-1 CellA-2 MyExp2Sid soma_list distance(x)>-1 distance(x)<10000 2.0 6.3 0.0   
+CellA_2 CellA_1 MyExp2Sid soma_list distance(x)>-1 distance(x)<10000 2.0 6.3 0.0   
+CellA_1 CellA_2 MyExp2Sid soma_list distance(x)>-1 distance(x)<10000 2.0 6.3 0.0   
