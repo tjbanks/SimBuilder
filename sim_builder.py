@@ -1993,7 +1993,7 @@ def results_page(root):
     
     def local_run():
         run = 'nrnivmodl' #Sams fix
-        run_command_in_console_threaded(run)
+        run_command_in_console(run)
         run = 'nrniv main.hoc'
         run_command_in_console_threaded(run)
         return
