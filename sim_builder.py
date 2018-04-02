@@ -1202,7 +1202,7 @@ def connections_page(root):
     
 def synapses_page(root):
     sections_list = ['dendrite_list','soma_list','apical_list','axon_list']
-    synapse_type_list = ['MyExp2Sid','ExpGABAab']
+    synapse_type_list = ['MyExp2Sid','ExpGABAab','Custom']
     condition_list = ['distance(x)','y3d(x)']
     synapse_column_names = ["Postsynaptic Cell", "Presynaptic Cells",\
                                 "Synapse Type", "Postsynaptic Section Target",\
@@ -1253,14 +1253,27 @@ def synapses_page(root):
             top.resizable(0,0)
             tk.Label(top, text='Create new synapse:\nValues from currently loaded cells file.').grid(row=0,column=0,sticky="WE",columnspan=2)
             
+            core_extras = tk.Frame(top)
             gaba_extras = tk.Frame(top)
+            custom_extras = tk.Frame(top)
             
             def showhide_gaba_extras(*args):
                 if self.syntype_value.get() == synapse_type_list[1]:
+                    custom_extras.grid_forget()
+                    core_extras.grid(row=7,column=0,columnspan=2)
                     gaba_extras.grid(row=10,column=0,columnspan=2)
+                elif self.syntype_value.get() == synapse_type_list[2]:
+                    core_extras.grid_forget()
+                    gaba_extras.grid_forget()
+                    custom_extras.grid(row=7,column=0,columnspan=2)
+                    return
                 else:
+                    core_extras.grid(row=7,column=0,columnspan=2)
+                    custom_extras.grid_forget()
                     gaba_extras.grid_forget()
                 return
+            
+            core_extras.grid(row=7,column=0,columnspan=2)
             
             self.pre_value = tk.StringVar(top)
             self.post_value = tk.StringVar(top)
@@ -1276,6 +1289,15 @@ def synapses_page(root):
             self.tau1b_value = tk.StringVar(top)
             self.tau2b_value = tk.StringVar(top)
             self.eb_value = tk.StringVar(top)
+            
+            self.custom_mod_value = tk.StringVar(top)
+            self.custom1_value = tk.StringVar(top)
+            self.custom2_value = tk.StringVar(top)
+            self.custom3_value = tk.StringVar(top)
+            self.custom4_value = tk.StringVar(top)
+            self.custom5_value = tk.StringVar(top)
+            self.custom6_value = tk.StringVar(top)
+            
             self.confirm = False
             
             #Inputs
@@ -1346,28 +1368,28 @@ def synapses_page(root):
             self.cond2_text_value.set('10000')
             self.cond2_text.grid(row=6, column=3)
             
-            l = tk.Label(top, text='Tau1a',width=25, background='light gray')
+            l = tk.Label(core_extras, text='Tau1a',width=25, background='light gray')
             l.grid(row=7,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.tau1a = tk.Entry(top,textvariable=self.tau1a_value)
+            self.tau1a = tk.Entry(core_extras,textvariable=self.tau1a_value)
             self.tau1a_value.set('2.0')
             self.tau1a.grid(row=7,column=1)
             
-            l = tk.Label(top, text='Tau2a',width=25, background='light gray')
+            l = tk.Label(core_extras, text='Tau2a',width=25, background='light gray')
             l.grid(row=8,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.tau2a = tk.Entry(top,textvariable=self.tau2a_value)
+            self.tau2a = tk.Entry(core_extras,textvariable=self.tau2a_value)
             self.tau2a_value.set('6.3')
             self.tau2a.grid(row=8,column=1)
             
-            l = tk.Label(top, text='ea',width=25, background='light gray')
+            l = tk.Label(core_extras, text='ea',width=25, background='light gray')
             l.grid(row=9,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.ea = tk.Entry(top,textvariable=self.ea_value)
+            self.ea = tk.Entry(core_extras,textvariable=self.ea_value)
             self.ea_value.set('0.0')
             self.ea.grid(row=9,column=1)
             
-            
+            #GABA EXTRAS
             
             l = tk.Label(gaba_extras, text='Tau1b',width=25, background='light gray')
             l.grid(row=10,column=0,pady=5,padx=5)
@@ -1386,6 +1408,50 @@ def synapses_page(root):
             l.config(relief=tk.GROOVE)
             self.eb = tk.Entry(gaba_extras,textvariable=self.eb_value)
             self.eb.grid(row=12,column=1)
+            
+            
+            #CUSTOM EXTRAS
+            
+            l = tk.Label(custom_extras, text='Synapse Mod File',width=25, background='light gray')
+            l.grid(row=7,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.custom_mod = tk.OptionMenu(custom_extras, self.custom_mod_value, *condition_list)
+            self.custom_mod_value.set('')
+            self.custom_mod.grid(row=7,column=1)
+            
+            l = tk.Label(custom_extras, text='Custom Parameter 1',width=25, background='light gray')
+            l.grid(row=8,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.custom1 = tk.Entry(custom_extras,textvariable=self.custom1_value)
+            self.custom1.grid(row=8,column=1)
+            
+            l = tk.Label(custom_extras, text='Custom Parameter 2',width=25, background='light gray')
+            l.grid(row=9,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.custom2 = tk.Entry(custom_extras,textvariable=self.custom2_value)
+            self.custom2.grid(row=9,column=1)
+            
+            l = tk.Label(custom_extras, text='Custom Parameter 3',width=25, background='light gray')
+            l.grid(row=10,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.custom3 = tk.Entry(custom_extras,textvariable=self.custom3_value)
+            self.custom3.grid(row=10,column=1)
+            
+            l = tk.Label(custom_extras, text='Custom Parameter 4',width=25, background='light gray')
+            l.grid(row=11,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.custom4 = tk.Entry(custom_extras,textvariable=self.custom4_value)
+            self.custom4.grid(row=11,column=1)
+            
+            l = tk.Label(custom_extras, text='Custom Parameter 5',width=25, background='light gray')
+            l.grid(row=12,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
+            self.custom5 = tk.Entry(custom_extras,textvariable=self.custom5_value)
+            self.custom5.grid(row=12,column=1)
+            
+            
+            
+            
             
             
             #Return
