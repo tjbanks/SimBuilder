@@ -1,0 +1,14 @@
+CellNums
+
+A40	6
+	ANE – 25
+	ADA – 9
+B24	5
+	BNE – 11
+	BDA - 8 
+C16 	3
+	CNE - 8
+	CDA - 5
+
+Connectivity
+

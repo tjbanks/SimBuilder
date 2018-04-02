@@ -155,7 +155,7 @@ proc append_sections() { local i
 	
 	for i=0,NumSoma-1 soma[i] { all.append()
 								soma_list.append()}		
-	for i=0,NumApical-1 apical[i] { all.append()
+	for i=0,NumApical-1 dend[i] { all.append()
 								apical_list.append()	
 								dendrite_list.append()} 
 	
