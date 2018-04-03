@@ -2200,7 +2200,7 @@ def results_page(root):
 
 def main(root):
     
-    
+    print('Starting Sim Builder. Please wait...')
     style = ttk.Style()
     try:
         style.theme_create( "colored", parent="alt", settings={
@@ -2218,7 +2218,7 @@ def main(root):
                                   "expand": [("selected", [1, 1, 1, 0])] } } } )
         style.theme_use("colored")
     except Exception:
-        print('style already loaded')
+        print('Style loaded previously. Continuing.')
     
     frame1 = tk.Frame(root)
     frame1.grid(row=0,column=0,sticky='news')
@@ -2264,7 +2264,7 @@ def main(root):
     
     display_app_status("Ready")
     try:
-        print('Starting Sim Builder')
+        print('Load complete. Running Sim Builder...')
         root.mainloop()
     except Exception:
         print('Error, closing display loop')
@@ -2280,7 +2280,7 @@ def display_app_status(str):
             
 root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
-root.title("Generalized Neuron Network Model Builder (University of Missouri - Neural Engineering Laboratory - Nair) BETA VERSION")
+root.title("Generalized Neuron Network Model Builder (University of Missouri - Neural Engineering Laboratory - Nair) Sim Builder BETA VERSION")
 root.geometry('1050x600')
 
 #root.resizable(0,0)
