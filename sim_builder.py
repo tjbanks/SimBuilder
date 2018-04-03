@@ -1094,7 +1094,7 @@ def connections_page(root):
         post = np.repeat(post[post.columns[0]],pre_nr).reset_index(drop=True)
         pre = pd.DataFrame(pre*post_nr)
         
-        df = pd.concat([post,pre],axis=1)
+        df = pd.concat([pre,post],axis=1)
         df[2] = '0.0'
         df[3] = '0'
         df[4] = '0'
