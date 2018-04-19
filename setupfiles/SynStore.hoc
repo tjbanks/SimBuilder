@@ -1,3 +1,4 @@
+{load_file("stdlib.hoc", "String")}
 /************************************************************
 'ca1' model code repository
 Written by Marianne Bezaire, marianne.bezaire@gmail.com, www.mariannebezaire.com
@@ -50,6 +51,7 @@ begintemplate SynStore			// Define a template that stores
 	public NewSynStr, SynStr, CondStr, GABAabFlag, CustomFlag, SynType, Scaling
 	
 	// Define strings
+        objref strobj
 	strdef NewSynStr, SynStr, CondStr, SecRefStr
 	strdef CheckCond1,CheckCond2, SynType, Scaling
 	strdef cust1,cust2,cust3,cust4,cust5
@@ -79,7 +81,6 @@ begintemplate SynStore			// Define a template that stores
 							//  must be away from the soma
 		if (strcmp(SynType,"Custom")==0) { //Extra stuff trying (Tyler Banks)
 			CustomFlag = 1
-			objref strobj
 			strobj = new StringFunctions()
 			
 			strobj.tail($5, "modfile:", SynType) //Reassign the syntype
