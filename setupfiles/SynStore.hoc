@@ -1,3 +1,4 @@
+{load_file("stdlib.hoc", "String")}
 /************************************************************
 'ca1' model code repository
 Written by Marianne Bezaire, marianne.bezaire@gmail.com, www.mariannebezaire.com
@@ -46,11 +47,15 @@ begintemplate SynStore			// Define a template that stores
 	// Public variables, accessible from outside template
 	public init, SecRefStr,CheckCond1,CheckCond2
 	public tau1,tau2,efirst,tau1a,tau2a,ea,tau1b,tau2b,eb
-	public NewSynStr, SynStr, CondStr, GABAabFlag, SynType, Scaling
+	public cust1,cust2,cust3,cust4,cust5
+	public NewSynStr, SynStr, CondStr, GABAabFlag, CustomFlag, SynType, Scaling
 	
 	// Define strings
+        objref strobj
 	strdef NewSynStr, SynStr, CondStr, SecRefStr
 	strdef CheckCond1,CheckCond2, SynType, Scaling
+	strdef cust1,cust2,cust3,cust4,cust5
+	strdef cust1p,cust1v,cust2p,cust2v,cust3p,cust3v,cust4p,cust4v,cust5p,cust5v
 
 	proc init(){			// Define a proc to set the parameters
 							//  upon creation of SynStore object
@@ -74,32 +79,78 @@ begintemplate SynStore			// Define a template that stores
 							//  to be created at that point. Usually
 							//  is a maximum distance that the point
 							//  must be away from the soma
-									
-		if (strcmp(SynType,"ExpGABAab")==0) {	// A GABA_A,B synapse
-			GABAabFlag=1
+		if (strcmp(SynType,"Custom")==0) { //Extra stuff trying (Tyler Banks)
+			CustomFlag = 1
+			strobj = new StringFunctions()
 			
-			// GABA A component
-			tau1a = $5				// Rise time constant
-			tau2a = $6				// Decay time constant
-			ea = $7					// Reversal potential (Cl-)
+			strobj.tail($5, "modfile:", SynType) //Reassign the syntype
+			strobj.head(SynType, ".mod", SynType) //Reassign the syntype, remove .mod
 			
-			// GABA B component
-			tau1b = $8				// Rise time constant
-			tau2b = $9				// Decay time constant
-			eb = $10				// Reversal potential (K+)
+			strobj.head($6, ":", cust1p)
+			strobj.tail($6, ":", cust1v)
+			strobj.head($7, ":", cust2p)
+			strobj.tail($7, ":", cust2v)
+			strobj.head($8, ":", cust3p)
+			strobj.tail($8, ":", cust3v)
+			strobj.head($9, ":", cust4p)
+			strobj.tail($9, ":", cust4v)
+			strobj.head($10, ":", cust5p)
+			strobj.tail($10, ":", cust5v)
 			
-		} else {				// Not a GABA_A,B synapse
-			GABAabFlag=0
-			tau1 = $5				// Rise time constant
-			tau2 = $6				// Decay time constant
-			efirst = $7				// Reversal potential of synapse
+			if(strcmp(cust1p,"none")==0) {
+				cust1 = ""
+			} else {
+				sprint(cust1,"syn.%s = %s", cust1p,cust1v)
+			}
+			if(strcmp(cust2p,"none")==0) {
+				cust2 = ""
+			} else {
+				sprint(cust2,"syn.%s = %s", cust2p,cust2v)
+			}
+			if(strcmp(cust3p,"none")==0) {
+				cust3 = ""
+			} else {
+				sprint(cust3,"syn.%s = %s", cust3p,cust3v)
+			}
+			if(strcmp(cust4p,"none")==0) {
+				cust4 = ""
+			} else {
+				sprint(cust4,"syn.%s = %s", cust4p,cust4v)
+			}
+			if(strcmp(cust5p,"none")==0) {
+				cust5 = ""
+			} else {
+				sprint(cust5,"syn.%s = %s", cust5p,cust5v)
+			}
 			
-			if (strcmp(SynType,"MyExp2Sidnw")==0) {	// If using a mechanism
-													//  that allows weight 
-													//  to scale with
-													//  distance
-													
-				sprint(Scaling,"syn.nw = %s", $s8)	// Scaling equation
+			sprint(Scaling,"syn.nw = %s", $s8)
+		} else{
+			if (strcmp(SynType,"ExpGABAab")==0) {	// A GABA_A,B synapse
+				GABAabFlag=1
+				
+				// GABA A component
+				tau1a = $5				// Rise time constant
+				tau2a = $6				// Decay time constant
+				ea = $7					// Reversal potential (Cl-)
+				
+				// GABA B component
+				tau1b = $8				// Rise time constant
+				tau2b = $9				// Decay time constant
+				eb = $10				// Reversal potential (K+)
+				
+			} else {				// Not a GABA_A,B synapse
+				GABAabFlag=0
+				tau1 = $5				// Rise time constant
+				tau2 = $6				// Decay time constant
+				efirst = $7				// Reversal potential of synapse
+				
+				if (strcmp(SynType,"MyExp2Sidnw")==0) {	// If using a mechanism
+														//  that allows weight 
+														//  to scale with
+														//  distance
+														
+					sprint(Scaling,"syn.nw = %s", $s8)	// Scaling equation
+				}
 			}
 		}
 		

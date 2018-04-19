@@ -225,20 +225,38 @@ proc define_synapses() {
 					execute(cellType[ind].SynList[celltype].object(r).CondStr, this)
 					 if (y==1) {
 						execute(cellType[ind].SynList[celltype].object(r).SynStr, this)
-						if (cellType[ind].SynList[celltype].object(r).GABAabFlag==0) {
-							syn.tau1 = cellType[ind].SynList[celltype].object(r).tau1
-							syn.tau2 = cellType[ind].SynList[celltype].object(r).tau2
-							syn.e = cellType[ind].SynList[celltype].object(r).efirst
-							if (strcmp(cellType[ind].SynList[celltype].object(r).SynType,"MyExp2Sidnw")==0) {
-								execute(cellType[ind].SynList[celltype].object(r).Scaling, this)
+						if(cellType[ind].SynList[celltype].object(r).CustomFlag==1) {
+							if (strcmp(cellType[ind].SynList[celltype].object(r).cust1,"")!=0) {
+									execute(cellType[ind].SynList[celltype].object(r).cust1, this)
+							}
+							if (strcmp(cellType[ind].SynList[celltype].object(r).cust2,"")!=0) {
+									execute(cellType[ind].SynList[celltype].object(r).cust2, this)
+							}
+							if (strcmp(cellType[ind].SynList[celltype].object(r).cust3,"")!=0) {
+									execute(cellType[ind].SynList[celltype].object(r).cust3, this)
+							}
+							if (strcmp(cellType[ind].SynList[celltype].object(r).cust4,"")!=0) {
+									execute(cellType[ind].SynList[celltype].object(r).cust4, this)
+							}
+							if (strcmp(cellType[ind].SynList[celltype].object(r).cust5,"")!=0) {
+									execute(cellType[ind].SynList[celltype].object(r).cust5, this)
 							}
 						} else {
-							syn.tau1a = cellType[ind].SynList[celltype].object(r).tau1a
-							syn.tau2a = cellType[ind].SynList[celltype].object(r).tau2a
-							syn.ea = cellType[ind].SynList[celltype].object(r).ea
-							syn.tau1b = cellType[ind].SynList[celltype].object(r).tau1b
-							syn.tau2b = cellType[ind].SynList[celltype].object(r).tau2b
-							syn.eb = cellType[ind].SynList[celltype].object(r).eb
+							if (cellType[ind].SynList[celltype].object(r).GABAabFlag==0) {
+								syn.tau1 = cellType[ind].SynList[celltype].object(r).tau1
+								syn.tau2 = cellType[ind].SynList[celltype].object(r).tau2
+								syn.e = cellType[ind].SynList[celltype].object(r).efirst
+								if (strcmp(cellType[ind].SynList[celltype].object(r).SynType,"MyExp2Sidnw")==0) {
+									execute(cellType[ind].SynList[celltype].object(r).Scaling, this)
+								}
+							} else {
+								syn.tau1a = cellType[ind].SynList[celltype].object(r).tau1a
+								syn.tau2a = cellType[ind].SynList[celltype].object(r).tau2a
+								syn.ea = cellType[ind].SynList[celltype].object(r).ea
+								syn.tau1b = cellType[ind].SynList[celltype].object(r).tau1b
+								syn.tau2b = cellType[ind].SynList[celltype].object(r).tau2b
+								syn.eb = cellType[ind].SynList[celltype].object(r).eb
+							}
 						}
 						syn.sid = i
 						templist.append(syn)
