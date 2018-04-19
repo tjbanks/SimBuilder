@@ -69,12 +69,12 @@ proc syn_cells() {localobj mySynStore
 											//  type.
 											
 		if (strcmp(SynType,"Custom")==0) {
-			modfile = fc2.scanvar
-			cust1 = fc2.scanvar
-			cust2 = fc2.scanvar
-			cust3 = fc2.scanvar
-			cust4 = fc2.scanvar
-			cust5 = fc2.scanvar
+			modfile = f2c.scanvar
+			cust1 = f2c.scanvar
+			cust2 = f2c.scanvar
+			cust3 = f2c.scanvar
+			cust4 = f2c.scanvar
+			cust5 = f2c.scanvar
 		}
 		else {
 			if (strcmp(SynType,"MyExp2Sidnw")==0) {	// For nw types of synapses, which have a scaling
