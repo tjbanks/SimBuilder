@@ -44,6 +44,7 @@ phasicdata_file_postfix = '.dat'
 trace_file_prefix = 'trace_'
 trace_file_postfix = '.dat'
 
+mods_glob = os.path.join('*.mod')
 cellnums_glob = os.path.join(dataset_folder,cellnums_file_prefix + '*' + cellnums_file_postfix)
 connections_glob = os.path.join(dataset_folder, conndata_file_prefix +'*'+ conndata_file_postfix)
 syndata_glob = os.path.join(dataset_folder, syndata_file_prefix + '*' + syndata_file_postfix)
@@ -1207,8 +1208,12 @@ def synapses_page(root):
     synapse_column_names = ["Postsynaptic Cell", "Presynaptic Cells",\
                                 "Synapse Type", "Postsynaptic Section Target",\
                                 "Condition 1", "Condition 2",\
-                                "Tau1a", "Tau2a", "ea",\
-                                "Tau1b", "Tau2b", "eb"]
+                                "Tau1a/modfile", "Tau2a/cust1", "ea/cust2",\
+                                "Tau1b/cust3", "Tau2b/cust4", "eb/cust5"]
+    mod_list = glob.glob(mods_glob)
+    if len(mod_list) is 0:
+        mod_list.append('')
+        
     class synapses_adapter(object):
         
         def __init__(self, root):
@@ -1249,7 +1254,7 @@ def synapses_page(root):
         def __init__(self, parent, text="value", lefttext="",righttext=""):
     
             top = self.top = tk.Toplevel(parent)
-            top.geometry('475x450')
+            top.geometry('475x475')
             top.resizable(0,0)
             tk.Label(top, text='Create new synapse:\nValues from currently loaded cells file.').grid(row=0,column=0,sticky="WE",columnspan=2)
             
@@ -1265,7 +1270,7 @@ def synapses_page(root):
                 elif self.syntype_value.get() == synapse_type_list[2]:
                     core_extras.grid_forget()
                     gaba_extras.grid_forget()
-                    custom_extras.grid(row=7,column=0,columnspan=2)
+                    custom_extras.grid(row=7,column=0,columnspan=4)
                     return
                 else:
                     core_extras.grid(row=7,column=0,columnspan=2)
@@ -1297,6 +1302,12 @@ def synapses_page(root):
             self.custom4_value = tk.StringVar(top)
             self.custom5_value = tk.StringVar(top)
             self.custom6_value = tk.StringVar(top)
+            self.custom1_value2 = tk.StringVar(top)
+            self.custom2_value2 = tk.StringVar(top)
+            self.custom3_value2 = tk.StringVar(top)
+            self.custom4_value2 = tk.StringVar(top)
+            self.custom5_value2 = tk.StringVar(top)
+            self.custom6_value2 = tk.StringVar(top)
             
             self.confirm = False
             
@@ -1415,39 +1426,58 @@ def synapses_page(root):
             l = tk.Label(custom_extras, text='Synapse Mod File',width=25, background='light gray')
             l.grid(row=7,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.custom_mod = tk.OptionMenu(custom_extras, self.custom_mod_value, *condition_list)
+            self.custom_mod = tk.OptionMenu(custom_extras, self.custom_mod_value, *mod_list)
             self.custom_mod_value.set('')
             self.custom_mod.grid(row=7,column=1)
             
-            l = tk.Label(custom_extras, text='Custom Parameter 1',width=25, background='light gray')
-            l.grid(row=8,column=0,pady=5,padx=5)
-            l.config(relief=tk.GROOVE)
-            self.custom1 = tk.Entry(custom_extras,textvariable=self.custom1_value)
-            self.custom1.grid(row=8,column=1)
+            tk.Label(custom_extras, text=' Syn."parameter"  ').grid(row=8, column=1)
+            tk.Label(custom_extras, text=' : ').grid(row=8, column=2)
+            tk.Label(custom_extras, text=' "value" ').grid(row=8, column=3)
             
-            l = tk.Label(custom_extras, text='Custom Parameter 2',width=25, background='light gray')
+            l = tk.Label(custom_extras, text='Custom Parameter 1',width=25, background='light gray')
             l.grid(row=9,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.custom2 = tk.Entry(custom_extras,textvariable=self.custom2_value)
-            self.custom2.grid(row=9,column=1)
+            self.custom1 = tk.Entry(custom_extras,textvariable=self.custom1_value)
+            self.custom1.grid(row=9,column=1)
+            tk.Label(custom_extras, text=' : ').grid(row=9, column=2)
+            self.custom1_text = tk.Entry(custom_extras, textvariable=self.custom1_value2)
+            self.custom1_text.grid(row=9, column=3)
             
-            l = tk.Label(custom_extras, text='Custom Parameter 3',width=25, background='light gray')
+            l = tk.Label(custom_extras, text='Custom Parameter 2',width=25, background='light gray')
             l.grid(row=10,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.custom3 = tk.Entry(custom_extras,textvariable=self.custom3_value)
-            self.custom3.grid(row=10,column=1)
+            self.custom2 = tk.Entry(custom_extras,textvariable=self.custom2_value)
+            self.custom2.grid(row=10,column=1)
+            tk.Label(custom_extras, text=' : ').grid(row=10, column=2)
+            self.custom2_text = tk.Entry(custom_extras, textvariable=self.custom2_value2)
+            self.custom2_text.grid(row=10, column=3)
             
-            l = tk.Label(custom_extras, text='Custom Parameter 4',width=25, background='light gray')
+            l = tk.Label(custom_extras, text='Custom Parameter 3',width=25, background='light gray')
             l.grid(row=11,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
-            self.custom4 = tk.Entry(custom_extras,textvariable=self.custom4_value)
-            self.custom4.grid(row=11,column=1)
+            self.custom3 = tk.Entry(custom_extras,textvariable=self.custom3_value)
+            self.custom3.grid(row=11,column=1)
+            tk.Label(custom_extras, text=' : ').grid(row=11, column=2)
+            self.custom3_text = tk.Entry(custom_extras, textvariable=self.custom3_value2)
+            self.custom3_text.grid(row=11, column=3)
             
-            l = tk.Label(custom_extras, text='Custom Parameter 5',width=25, background='light gray')
+            l = tk.Label(custom_extras, text='Custom Parameter 4',width=25, background='light gray')
             l.grid(row=12,column=0,pady=5,padx=5)
             l.config(relief=tk.GROOVE)
+            self.custom4 = tk.Entry(custom_extras,textvariable=self.custom4_value)
+            self.custom4.grid(row=12,column=1)
+            tk.Label(custom_extras, text=' : ').grid(row=12, column=2)
+            self.custom4_text = tk.Entry(custom_extras, textvariable=self.custom4_value2)
+            self.custom4_text.grid(row=12, column=3)
+            
+            l = tk.Label(custom_extras, text='Custom Parameter 5',width=25, background='light gray')
+            l.grid(row=13,column=0,pady=5,padx=5)
+            l.config(relief=tk.GROOVE)
             self.custom5 = tk.Entry(custom_extras,textvariable=self.custom5_value)
-            self.custom5.grid(row=12,column=1)
+            self.custom5.grid(row=13,column=1)
+            tk.Label(custom_extras, text=' : ').grid(row=13, column=2)
+            self.custom5_text = tk.Entry(custom_extras, textvariable=self.custom5_value2)
+            self.custom5_text.grid(row=13, column=3)
             
             
             
@@ -1469,16 +1499,50 @@ def synapses_page(root):
             return True
     
         def get_values(self):
-            if self.syntype_value.get() == synapse_type_list[0]: #set to nan if it's not a gabaab
-                self.tau1b_value.set('nan')
-                self.tau2b_value.set('nan')
-                self.eb_value.set('nan')
+            
+            if self.syntype_value.get() == "Custom":
+                if self.custom_mod_value.get() is '': 
+                    self.custom_mod_value.set('none')
+                if self.custom1_value.get() is '' or self.custom1_value2.get() is '': 
+                    self.custom1_value.set('none')
+                    self.custom1_value2.set('none')
+                if self.custom2_value.get() is '' or self.custom2_value2.get() is '': 
+                    self.custom2_value.set('none')
+                    self.custom2_value2.set('none')
+                if self.custom3_value.get() is '' or self.custom3_value2.get() is '': 
+                    self.custom3_value.set('none')
+                    self.custom3_value2.set('none')
+                if self.custom4_value.get() is '' or self.custom4_value2.get() is '': 
+                    self.custom4_value.set('none')
+                    self.custom4_value2.set('none')
+                if self.custom5_value.get() is '' or self.custom5_value2.get() is '': 
+                    self.custom5_value.set('none')
+                    self.custom5_value2.set('none')
+                if self.custom6_value.get() is '' or self.custom6_value2.get() is '': 
+                    self.custom6_value.set('none')
+                    self.custom6_value2.set('none')
                 
-            newsyn = [self.pre_value.get(), self.post_value.get(), self.syntype_value.get(),
-                  self.section_value.get(), self.cond1_value.get()+'>'+self.cond1_text_value.get(), self.cond2_value.get()+'<'+self.cond2_text_value.get(),
-                  self.tau1a_value.get(), self.tau2a_value.get(), self.ea_value.get(),
-                  self.tau1b_value.get(), self.tau2b_value.get(), self.eb_value.get()]
-            return newsyn
+                newsyn = [self.pre_value.get(), self.post_value.get(), self.syntype_value.get(),
+                      self.section_value.get(), self.cond1_value.get()+'>'+self.cond1_text_value.get(), self.cond2_value.get()+'<'+self.cond2_text_value.get(),
+                      "modfile"+":"+self.custom_mod_value.get(), 
+                      self.custom1_value.get()+":"+self.custom1_value2.get(),
+                      self.custom2_value.get()+":"+self.custom2_value2.get(),
+                      self.custom3_value.get()+":"+self.custom3_value2.get(),
+                      self.custom4_value.get()+":"+self.custom4_value2.get(),
+                      self.custom5_value.get()+":"+self.custom5_value2.get()]
+                
+                return newsyn
+            else:
+                if self.syntype_value.get() == synapse_type_list[0]: #set to nan if it's not a gabaab
+                    self.tau1b_value.set('nan')
+                    self.tau2b_value.set('nan')
+                    self.eb_value.set('nan')
+                    
+                newsyn = [self.pre_value.get(), self.post_value.get(), self.syntype_value.get(),
+                      self.section_value.get(), self.cond1_value.get()+'>'+self.cond1_text_value.get(), self.cond2_value.get()+'<'+self.cond2_text_value.get(),
+                      self.tau1a_value.get(), self.tau2a_value.get(), self.ea_value.get(),
+                      self.tau1b_value.get(), self.tau2b_value.get(), self.eb_value.get()]
+                return newsyn
             
         def ok(self):
             self.confirm = True
