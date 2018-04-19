@@ -20,6 +20,7 @@ parameters:
 ************************************************************/
 
 strdef cmdstr, cmdstr1, pre_type, post_type, SecRefStr, SynType, CheckCond1, CheckCond2, Scaling
+strdef modfile,cust1,cust2,cust3,cust4,cust5
 objref f2c
 
 proc syn_cells() {localobj mySynStore
@@ -67,22 +68,31 @@ proc syn_cells() {localobj mySynStore
 											//  synapses of this type, from this presynaptic cell
 											//  type.
 											
-		
-		if (strcmp(SynType,"MyExp2Sidnw")==0) {	// For nw types of synapses, which have a scaling
-			f2c.scanstr(Scaling)				//  factor, load that factor here
+		if (strcmp(SynType,"Custom")==0) {
+			modfile = fc2.scanvar
+			cust1 = fc2.scanvar
+			cust2 = fc2.scanvar
+			cust3 = fc2.scanvar
+			cust4 = fc2.scanvar
+			cust5 = fc2.scanvar
 		}
+		else {
+			if (strcmp(SynType,"MyExp2Sidnw")==0) {	// For nw types of synapses, which have a scaling
+				f2c.scanstr(Scaling)				//  factor, load that factor here
+			}
 
-		if (strcmp(SynType,"ExpGABAab")==0) {	// For GABA_A,B synapses, which have extra
-			tau1a = f2c.scanvar					//  components for their GABA_B portion (time
-			tau2a = f2c.scanvar					//  constants and reversal potentials), load
-			ea = f2c.scanvar					//  both the A and B components
-			tau1b = f2c.scanvar
-			tau2b = f2c.scanvar
-			eb = f2c.scanvar
-		} else {								// For all other synapse types, there is only
-			tau1 = f2c.scanvar					//  one set of time constants and reversal potential
-			tau2 = f2c.scanvar
-			efirst = f2c.scanvar
+			if (strcmp(SynType,"ExpGABAab")==0) {	// For GABA_A,B synapses, which have extra
+				tau1a = f2c.scanvar					//  components for their GABA_B portion (time
+				tau2a = f2c.scanvar					//  constants and reversal potentials), load
+				ea = f2c.scanvar					//  both the A and B components
+				tau1b = f2c.scanvar
+				tau2b = f2c.scanvar
+				eb = f2c.scanvar
+			} else {								// For all other synapse types, there is only
+				tau1 = f2c.scanvar					//  one set of time constants and reversal potential
+				tau2 = f2c.scanvar
+				efirst = f2c.scanvar
+			}
 		}
 		// print pre_type, " to ", post_type, " as ", SynType, " within ", SecRefStr, " between ", CheckCond1, " and ", CheckCond2, ": ", tau1, " to ", tau2, " with e=", efirst
 		sprint(cmdstr, "%s_idx", pre_type)
@@ -94,8 +104,12 @@ proc syn_cells() {localobj mySynStore
 			} else {
 				if (strcmp(SynType,"MyExp2Sidnw")==0) {
 					mySynStore = new SynStore(SecRefStr,SynType,CheckCond1,CheckCond2,tau1,tau2,efirst,Scaling)
-				} else {			
-					mySynStore = new SynStore(SecRefStr,SynType,CheckCond1,CheckCond2,tau1,tau2,efirst)
+				} else {
+					if (strcmp(SynType,"Custom")==0) {
+						mysynStore = new SynStore(SecRefStr,SynType,CheckCond1,CheckCond2,modfile,cust1,cust2,cust3,cust4,cust5)
+					}else {
+						mySynStore = new SynStore(SecRefStr,SynType,CheckCond1,CheckCond2,tau1,tau2,efirst)
+					}
 				}
 			}
 
