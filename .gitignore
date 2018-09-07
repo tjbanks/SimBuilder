@@ -66,3 +66,8 @@ NSG/*.zip
 NSG/*.tar.gz
 NSG/figures/
 
+*.exe
+lib/
+mpl-data/
+tcl/
+tk/

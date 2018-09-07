@@ -4,12 +4,13 @@ Created on Sat Feb 24 23:26:54 2018
 
 @author: Tyler Banks
 """
-
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+
 
 import os
 import subprocess
@@ -2316,7 +2317,7 @@ def main(root):
     nb.add(page5, text='Phasic Stimulation')
     #nb.add(page6, text='Cell Builder')
     #nb.add(page7, text='Ion Channel Builder')
-    nb.add(page8, text='Run & Display Results')
+    #nb.add(page8, text='Run & Display Results')
     
     #Alternatively you could do parameters_page(page1), but wouldn't get scrolling
     bind_page(page1, parameters_page)
@@ -2324,7 +2325,7 @@ def main(root):
     bind_page(page3, connections_page)
     bind_page(page4, synapses_page)
     bind_page(page5, phasic_page)
-    bind_page(page8, results_page)
+    #bind_page(page8, results_page)
     
     display_app_status("Ready")
     try:
@@ -2344,7 +2345,7 @@ def display_app_status(str):
             
 root.columnconfigure(0,weight=1)
 root.rowconfigure(0,weight=1)
-root.title("Generalized Neuron Network Model Builder (University of Missouri - Neural Engineering Laboratory - Nair) Sim Builder BETA VERSION")
+root.title("Sim Builder - A Generalized Neuron Network Model Builder (University of Missouri - Nair Neural Engineering Lab - Tyler Banks) ")
 root.geometry('1050x600')
 
 #root.resizable(0,0)
